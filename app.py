@@ -158,51 +158,88 @@ def top_tracks():
     tracks = spotify_client.get_top_tracks(access_token, time_range, limit)
     return jsonify(tracks)
 
+# New endpoint to just get recommendations without creating a playlist
+@app.route('/get-recommendations', methods=['POST'])
+def get_recommendations():
+    try:
+        data = request.json
+        access_token = data.get('access_token')
+        prompt = data.get('prompt')
+
+        # Get top artists and tracks for seeds
+        top_artists = spotify_client.get_top_artists(access_token, limit=5)
+        top_tracks = spotify_client.get_top_tracks(access_token, limit=5)
+
+        artist_ids = [artist['id'] for artist in top_artists.get('items', [])]
+        track_ids = [track['id'] for track in top_tracks.get('items', [])]
+
+        # Get recommendations based on top artists and tracks
+        recommendations = spotify_client.get_recommendations(
+            access_token,
+            seed_artists=artist_ids[:2],
+            seed_tracks=track_ids[:3]
+        )
+
+        # Get the tracks details to return to frontend
+        tracks_details = recommendations.get('tracks', [])
+
+        return jsonify({
+            "name": f"Recommendations based on: {prompt[:30]}",
+            "tracks": tracks_details
+        })
+    except Exception as e:
+        print(f"Error in get_recommendations: {str(e)}")
+        return jsonify({"error": str(e)}), 500
+
 @app.route('/create-playlist', methods=['POST'])
 def create_playlist():
-    data = request.json
-    access_token = data.get('access_token')
-    prompt = data.get('prompt')
+    try:
+        data = request.json
+        access_token = data.get('access_token')
+        prompt = data.get('prompt')
 
-    # Get user profile to get user ID
-    user_profile = spotify_client.get_user_profile(access_token)
-    user_id = user_profile.get('id')
+        # Get user profile to get user ID
+        user_profile = spotify_client.get_user_profile(access_token)
+        user_id = user_profile.get('id')
 
-    # Get top artists and tracks for seeds
-    top_artists = spotify_client.get_top_artists(access_token, limit=5)
-    top_tracks = spotify_client.get_top_tracks(access_token, limit=5)
+        # Get top artists and tracks for seeds
+        top_artists = spotify_client.get_top_artists(access_token, limit=5)
+        top_tracks = spotify_client.get_top_tracks(access_token, limit=5)
 
-    artist_ids = [artist['id'] for artist in top_artists.get('items', [])]
-    track_ids = [track['id'] for track in top_tracks.get('items', [])]
+        artist_ids = [artist['id'] for artist in top_artists.get('items', [])]
+        track_ids = [track['id'] for track in top_tracks.get('items', [])]
 
-    # Get recommendations based on top artists and tracks
-    recommendations = spotify_client.get_recommendations(
-        access_token,
-        seed_artists=artist_ids[:2],
-        seed_tracks=track_ids[:3]
-    )
+        # Get recommendations based on top artists and tracks
+        recommendations = spotify_client.get_recommendations(
+            access_token,
+            seed_artists=artist_ids[:2],
+            seed_tracks=track_ids[:3]
+        )
 
-    # Create a new playlist
-    playlist_name = f"Playlist based on: {prompt[:30]}"
-    playlist = spotify_client.create_playlist(
-        access_token,
-        user_id,
-        playlist_name,
-        f"Created with prompt: {prompt}"
-    )
+        # Create a new playlist
+        playlist_name = f"Playlist based on: {prompt[:30]}"
+        playlist = spotify_client.create_playlist(
+            access_token,
+            user_id,
+            playlist_name,
+            f"Created with prompt: {prompt}"
+        )
 
-    # Add tracks to the playlist
-    track_uris = [track['uri'] for track in recommendations.get('tracks', [])]
-    result = spotify_client.add_tracks_to_playlist(access_token, playlist['id'], track_uris)
+        # Add tracks to the playlist
+        track_uris = [track['uri'] for track in recommendations.get('tracks', [])]
+        result = spotify_client.add_tracks_to_playlist(access_token, playlist['id'], track_uris)
 
-    # Get the tracks details to return to frontend
-    tracks_details = recommendations.get('tracks', [])
+        # Get the tracks details to return to frontend
+        tracks_details = recommendations.get('tracks', [])
 
-    return jsonify({
-        "name": playlist['name'],
-        "external_url": playlist['external_urls']['spotify'],
-        "tracks": tracks_details
-    })
+        return jsonify({
+            "name": playlist['name'],
+            "external_url": playlist['external_urls']['spotify'],
+            "tracks": tracks_details
+        })
+    except Exception as e:
+        print(f"Error in create_playlist: {str(e)}")
+        return jsonify({"error": str(e)}), 500
 
 @app.route('/user-profile')
 def user_profile():

@@ -119,15 +119,15 @@ document.addEventListener('DOMContentLoaded', () => {
     function createPlaylist() {
         const prompt = document.getElementById('playlist-prompt').value;
         if (!prompt) {
-            alert('Please enter a description for your playlist');
+            alert('Please enter a description for your recommendations');
             return;
         }
 
         const createButton = document.getElementById('create-playlist-button');
-        createButton.textContent = 'Creating...';
+        createButton.textContent = 'Getting Recommendations...';
         createButton.disabled = true;
 
-        fetch(`${API_BASE_URL}/create-playlist`, {
+        fetch(`${API_BASE_URL}/get-recommendations`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
@@ -137,22 +137,27 @@ document.addEventListener('DOMContentLoaded', () => {
                 prompt: prompt
             })
         })
-        .then(response => response.json())
+        .then(response => {
+            if (!response.ok) {
+                throw new Error(`HTTP error! Status: ${response.status}`);
+            }
+            return response.json();
+        })
         .then(data => {
-            createButton.textContent = 'Create Playlist';
+            createButton.textContent = 'Get Recommendations';
             createButton.disabled = false;
 
             const resultElement = document.getElementById('playlist-result');
             resultElement.classList.remove('hidden');
 
             const linkElement = document.getElementById('playlist-link');
-            linkElement.innerHTML = `<a href="${data.external_url}" target="_blank">${data.name}</a>`;
+            linkElement.innerHTML = `<h3>${data.name}</h3>`;
 
-            // Display tracks that were added to the playlist
+            // Display recommended tracks
             if (data.tracks && data.tracks.length > 0) {
                 const tracksList = document.createElement('div');
                 tracksList.className = 'playlist-tracks';
-                tracksList.innerHTML = '<h4>Tracks added:</h4><ul>';
+                tracksList.innerHTML = '<h4>Recommended Tracks:</h4><ul>';
 
                 data.tracks.forEach(track => {
                     tracksList.innerHTML += `<li>${track.name} - ${track.artists[0].name}</li>`;
@@ -160,13 +165,15 @@ document.addEventListener('DOMContentLoaded', () => {
 
                 tracksList.innerHTML += '</ul>';
                 resultElement.appendChild(tracksList);
+            } else if (data.error) {
+                alert(`Error: ${data.error}`);
             }
         })
         .catch(error => {
             console.error('Error:', error);
-            createButton.textContent = 'Create Playlist';
+            createButton.textContent = 'Get Recommendations';
             createButton.disabled = false;
-            alert('Failed to create playlist. Please try again.');
+            alert(`Failed to get recommendations: ${error.message}`);
         });
     }
 });
