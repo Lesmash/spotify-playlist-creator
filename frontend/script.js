@@ -1,7 +1,9 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // Replace this with your actual deployed backend URL
-    // Example: https://your-app-name.onrender.com
-    const API_BASE_URL = 'https://your-backend-url.onrender.com';
+    // This will work with both local development and production
+    // For production, replace with your actual Render URL
+    const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
+        ? '' // Use relative URL for local development
+        : 'https://your-render-url.onrender.com'; // Replace with your Render URL
     let accessToken = null;
 
     // Check if we have an access token in the URL (after redirect)
