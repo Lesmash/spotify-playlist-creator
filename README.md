@@ -25,6 +25,7 @@ werkzeug==2.0.1
    SPOTIFY_CLIENT_ID=your_spotify_client_id
    SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
    REDIRECT_URI=https://your-render-url.onrender.com/callback
+   HUGGINGFACE_API_KEY=your_huggingface_api_key
    ```
 5. Deploy the application
 
@@ -55,7 +56,10 @@ werkzeug==2.0.1
    SPOTIFY_CLIENT_ID=your_spotify_client_id
    SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
    REDIRECT_URI=http://localhost:5000/callback
+   HUGGINGFACE_API_KEY=your_huggingface_api_key
    ```
+
+   You can get a free Hugging Face API key by creating an account at [Hugging Face](https://huggingface.co/) and generating a token in your account settings.
 
 2. Install the required Python packages:
    ```
@@ -77,11 +81,14 @@ werkzeug==2.0.1
 - Connect with your Spotify account
 - View your top artists and tracks
 - Create personalized playlists based on your music taste
+- AI-powered music journey recommendations
+- Detailed explanations for why each song was selected
 - Open created playlists directly in Spotify
 
 ## Technologies Used
 
 - Backend: Flask (Python)
 - Frontend: HTML, CSS, JavaScript
-- API: Spotify Web API
+- APIs: Spotify Web API, Hugging Face Inference API
+- AI: Mistral-7B-Instruct for music recommendations
 - Hosting: Render

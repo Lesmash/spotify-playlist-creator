@@ -3,42 +3,45 @@ import json
 import os
 import random
 
-# This is a free API key for Hugging Face - no charges
-# You can get your own at https://huggingface.co/settings/tokens
-HUGGINGFACE_API_KEY = "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"  # This is a free demo key with limited usage
+# Get the Hugging Face API key from environment variables
+HUGGINGFACE_API_KEY = os.environ.get('HUGGINGFACE_API_KEY', '')
 
 def generate_recommendations(prompt, top_artists=None, top_tracks=None):
     """
     Generate music recommendations using AI based on a prompt and user's top artists/tracks
     """
     try:
+        # Check if we have an API key
+        if not HUGGINGFACE_API_KEY:
+            print("No Hugging Face API key found. Using fallback recommendations.")
+            return fallback_recommendations(prompt)
         # Format the user's top artists and tracks
         artists_text = ""
         if top_artists and len(top_artists) > 0:
             artists_text = "Your top artists are: " + ", ".join([artist.get('name', '') for artist in top_artists[:5]])
-        
+
         tracks_text = ""
         if top_tracks and len(top_tracks) > 0:
             tracks_text = "Your top tracks are: " + ", ".join([
-                f"{track.get('name', '')} by {track.get('artists', [{}])[0].get('name', '')}" 
+                f"{track.get('name', '')} by {track.get('artists', [{}])[0].get('name', '')}"
                 for track in top_tracks[:5]
             ])
-        
+
         # Create the full prompt for the AI
         full_prompt = f"""
         You are a music recommendation AI that creates personalized playlists.
-        
+
         {artists_text}
         {tracks_text}
-        
+
         The user wants a playlist with this description:
         {prompt}
-        
+
         Create a playlist of 15-20 songs that follows this emotional journey. For each song, provide:
         1. Song title
         2. Artist name
         3. A brief explanation of why this song fits in this part of the journey
-        
+
         Format your response as a JSON array of objects with the following structure:
         [
             {{
@@ -50,17 +53,17 @@ def generate_recommendations(prompt, top_artists=None, top_tracks=None):
             }},
             ...
         ]
-        
+
         Only return the JSON array, nothing else.
         """
-        
+
         # Call the Hugging Face API
         API_URL = "https://api-inference.huggingface.co/models/mistralai/Mistral-7B-Instruct-v0.2"
         headers = {
             "Authorization": f"Bearer {HUGGINGFACE_API_KEY}",
             "Content-Type": "application/json"
         }
-        
+
         payload = {
             "inputs": full_prompt,
             "parameters": {
@@ -70,32 +73,32 @@ def generate_recommendations(prompt, top_artists=None, top_tracks=None):
                 "do_sample": True
             }
         }
-        
+
         print("Calling AI model for recommendations...")
         response = requests.post(API_URL, headers=headers, json=payload)
-        
+
         if response.status_code != 200:
             print(f"Error from Hugging Face API: {response.status_code}")
             print(response.text)
             return fallback_recommendations(prompt)
-        
+
         # Parse the response
         result = response.json()
         generated_text = result[0].get('generated_text', '')
-        
+
         # Extract the JSON part from the response
         try:
             # Find the start and end of the JSON array
             json_start = generated_text.find('[')
             json_end = generated_text.rfind(']') + 1
-            
+
             if json_start == -1 or json_end == 0:
                 print("Could not find JSON in response")
                 return fallback_recommendations(prompt)
-            
+
             json_str = generated_text[json_start:json_end]
             recommendations = json.loads(json_str)
-            
+
             # Validate and clean up the recommendations
             cleaned_recommendations = []
             for rec in recommendations:
@@ -108,17 +111,17 @@ def generate_recommendations(prompt, top_artists=None, top_tracks=None):
                         'reason': rec.get('reason', '')
                     }
                     cleaned_recommendations.append(cleaned_rec)
-            
+
             if not cleaned_recommendations:
                 return fallback_recommendations(prompt)
-                
+
             return cleaned_recommendations
-            
+
         except json.JSONDecodeError as e:
             print(f"Error parsing JSON from AI response: {e}")
             print(f"Response text: {generated_text}")
             return fallback_recommendations(prompt)
-            
+
     except Exception as e:
         print(f"Error generating AI recommendations: {e}")
         return fallback_recommendations(prompt)
@@ -126,10 +129,10 @@ def generate_recommendations(prompt, top_artists=None, top_tracks=None):
 def fallback_recommendations(prompt):
     """Provide fallback recommendations if the AI service fails"""
     print("Using fallback recommendations")
-    
+
     # Check for specific artist mentions
     prompt_lower = prompt.lower()
-    
+
     # Playboi Carti specific recommendations
     if 'playboi carti' in prompt_lower:
         return [
@@ -190,7 +193,7 @@ def fallback_recommendations(prompt):
                 'reason': "Experimental and high-energy finale"
             }
         ]
-    
+
     # Generic recommendations based on mood journey
     high_energy_tracks = [
         {
@@ -215,7 +218,7 @@ def fallback_recommendations(prompt):
             'reason': "Rage-inducing anthem with heavy bass"
         }
     ]
-    
+
     vibey_tracks = [
         {
             'name': "Redbone",
@@ -239,7 +242,7 @@ def fallback_recommendations(prompt):
             'reason': "Ambient production with a hypnotic rhythm"
         }
     ]
-    
+
     melancholic_tracks = [
         {
             'name': "Self Control",
@@ -263,7 +266,7 @@ def fallback_recommendations(prompt):
             'reason': "Reflective lyrics about past relationships"
         }
     ]
-    
+
     sad_tracks = [
         {
             'name': "Marvin's Room",
@@ -287,7 +290,7 @@ def fallback_recommendations(prompt):
             'reason': "Intense emotional breakdown"
         }
     ]
-    
+
     upbeat_tracks = [
         {
             'name': "Sunflower",
@@ -311,7 +314,7 @@ def fallback_recommendations(prompt):
             'reason': "Classic feel-good dance anthem"
         }
     ]
-    
+
     # Combine tracks to create a journey
     journey = []
     journey.extend(high_energy_tracks)
@@ -319,5 +322,5 @@ def fallback_recommendations(prompt):
     journey.extend(melancholic_tracks)
     journey.extend(sad_tracks)
     journey.extend(upbeat_tracks)
-    
+
     return journey
