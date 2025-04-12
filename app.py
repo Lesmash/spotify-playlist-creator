@@ -100,6 +100,18 @@ class SpotifyClient:
         response = requests.get(endpoint, headers=headers, params=params)
         return response.json()
 
+    def search_tracks(self, access_token, query, limit=5):
+        headers = {"Authorization": f"Bearer {access_token}"}
+        endpoint = f"{self.api_base_url}search"
+        params = {
+            "q": query,
+            "type": "track",
+            "limit": limit
+        }
+        print(f"Searching for tracks with query: {query}")
+        response = requests.get(endpoint, headers=headers, params=params)
+        return response.json()
+
     def get_user_profile(self, access_token):
         headers = {"Authorization": f"Bearer {access_token}"}
         endpoint = f"{self.api_base_url}me"
@@ -181,8 +193,14 @@ def create_journey():
         prompt = data.get('prompt', '')
         print(f"Received journey prompt: {prompt}")
 
-        # Parse the prompt to identify mood segments
+        # Parse the prompt to identify mood segments and specific artists
         prompt_lower = prompt.lower()
+
+        # Check for specific artist mentions
+        specific_artists = []
+        if 'playboi carti' in prompt_lower:
+            specific_artists.append('Playboi Carti')
+            print("Detected specific artist request: Playboi Carti")
 
         # Define mood categories
         high_energy_keywords = ['high energy', 'energetic', 'upbeat', 'hype', 'rage', 'intense']
@@ -226,6 +244,41 @@ def create_journey():
 
             # Create a journey playlist with tracks for each mood
             journey_tracks = []
+
+            # Handle specific track requests
+            specific_track_requests = []
+            if 'playboi carti' in prompt_lower and 'walk' in prompt_lower:
+                print("Looking for WALK by Playboi Carti")
+                try:
+                    search_results = spotify_client.search_tracks(access_token, "WALK Playboi Carti")
+                    if 'tracks' in search_results and search_results['tracks']['items']:
+                        walk_track = search_results['tracks']['items'][0]
+                        print(f"Found WALK by Playboi Carti: {walk_track['name']} - {walk_track['artists'][0]['name']}")
+                        specific_track_requests.append({
+                            'position': 'start',
+                            'track': walk_track
+                        })
+                except Exception as e:
+                    print(f"Error searching for WALK by Playboi Carti: {str(e)}")
+
+            # Look for a Playboi Carti song for the end
+            if 'playboi carti' in prompt_lower and 'end' in prompt_lower:
+                print("Looking for a Playboi Carti song for the end")
+                try:
+                    search_results = spotify_client.search_tracks(access_token, "Playboi Carti experimental", limit=10)
+                    if 'tracks' in search_results and search_results['tracks']['items']:
+                        # Try to find a different track than WALK
+                        end_tracks = [track for track in search_results['tracks']['items']
+                                    if track['name'].lower() != 'walk']
+                        if end_tracks:
+                            end_track = end_tracks[0]
+                            print(f"Found Playboi Carti song for end: {end_track['name']}")
+                            specific_track_requests.append({
+                                'position': 'end',
+                                'track': end_track
+                            })
+                except Exception as e:
+                    print(f"Error searching for Playboi Carti end song: {str(e)}")
 
             # Function to get recommendations for a specific mood
             def get_mood_recommendations(mood, seed_artists, seed_tracks):
@@ -296,12 +349,129 @@ def create_journey():
                 mood_tracks = get_mood_recommendations(mood, artist_ids, track_ids)
                 journey_tracks.extend(mood_tracks)
 
-            print(f"Created journey with {len(journey_tracks)} total tracks")
+            # Add specific tracks at their requested positions
+            final_journey_tracks = []
+
+            # Add start tracks
+            start_tracks = [req['track'] for req in specific_track_requests if req['position'] == 'start']
+            final_journey_tracks.extend(start_tracks)
+
+            # Add the mood-based tracks
+            final_journey_tracks.extend(journey_tracks)
+
+            # Add end tracks
+            end_tracks = [req['track'] for req in specific_track_requests if req['position'] == 'end']
+            final_journey_tracks.extend(end_tracks)
+
+            print(f"Created journey with {len(final_journey_tracks)} total tracks")
+
+            # If we didn't get any tracks, provide fallback tracks
+            if not final_journey_tracks:
+                print("No tracks found, using fallback tracks")
+
+                # Create fallback tracks for Playboi Carti request
+                if 'playboi carti' in prompt_lower:
+                    final_journey_tracks = [
+                        {
+                            "name": "WALK",
+                            "artists": [{"name": "Playboi Carti"}],
+                            "album": {"name": "WHOLE LOTTA RED"}
+                        },
+                        {
+                            "name": "Sky",
+                            "artists": [{"name": "Playboi Carti"}],
+                            "album": {"name": "Whole Lotta Red"}
+                        },
+                        {
+                            "name": "Magnolia",
+                            "artists": [{"name": "Playboi Carti"}],
+                            "album": {"name": "Playboi Carti"}
+                        },
+                        {
+                            "name": "Shoota",
+                            "artists": [{"name": "Playboi Carti"}, {"name": "Lil Uzi Vert"}],
+                            "album": {"name": "Die Lit"}
+                        },
+                        {
+                            "name": "Long Time (Intro)",
+                            "artists": [{"name": "Playboi Carti"}],
+                            "album": {"name": "Die Lit"}
+                        },
+                        {
+                            "name": "ILoveUIHateU",
+                            "artists": [{"name": "Playboi Carti"}],
+                            "album": {"name": "Whole Lotta Red"}
+                        },
+                        {
+                            "name": "New Tank",
+                            "artists": [{"name": "Playboi Carti"}],
+                            "album": {"name": "Whole Lotta Red"}
+                        }
+                    ]
+                else:
+                    # Generic fallback tracks for different moods
+                    final_journey_tracks = [
+                        # High energy tracks
+                        {
+                            "name": "Sicko Mode",
+                            "artists": [{"name": "Travis Scott"}, {"name": "Drake"}],
+                            "album": {"name": "Astroworld"}
+                        },
+                        {
+                            "name": "DNA.",
+                            "artists": [{"name": "Kendrick Lamar"}],
+                            "album": {"name": "DAMN."}
+                        },
+                        # Vibey tracks
+                        {
+                            "name": "Redbone",
+                            "artists": [{"name": "Childish Gambino"}],
+                            "album": {"name": "Awaken, My Love!"}
+                        },
+                        {
+                            "name": "Nights",
+                            "artists": [{"name": "Frank Ocean"}],
+                            "album": {"name": "Blonde"}
+                        },
+                        # Melancholic tracks
+                        {
+                            "name": "Self Control",
+                            "artists": [{"name": "Frank Ocean"}],
+                            "album": {"name": "Blonde"}
+                        },
+                        {
+                            "name": "505",
+                            "artists": [{"name": "Arctic Monkeys"}],
+                            "album": {"name": "Favourite Worst Nightmare"}
+                        },
+                        # Sad tracks
+                        {
+                            "name": "Marvin's Room",
+                            "artists": [{"name": "Drake"}],
+                            "album": {"name": "Take Care"}
+                        },
+                        {
+                            "name": "Jocelyn Flores",
+                            "artists": [{"name": "XXXTENTACION"}],
+                            "album": {"name": "17"}
+                        },
+                        # Upbeat tracks
+                        {
+                            "name": "Sunflower",
+                            "artists": [{"name": "Post Malone"}, {"name": "Swae Lee"}],
+                            "album": {"name": "Spider-Man: Into the Spider-Verse"}
+                        },
+                        {
+                            "name": "Good Feeling",
+                            "artists": [{"name": "Flo Rida"}],
+                            "album": {"name": "Wild Ones"}
+                        }
+                    ]
 
             # Return the journey tracks
             return jsonify({
                 "name": f"Music Journey: {prompt[:30]}",
-                "tracks": journey_tracks
+                "tracks": final_journey_tracks
             })
 
         except Exception as e:

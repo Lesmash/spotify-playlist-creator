@@ -206,7 +206,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 const tracksPerMood = Math.ceil(data.tracks.length / moods.length);
 
                 // Create a section for each mood
-                let trackIndex = 0;
                 moods.forEach((mood, moodIndex) => {
                     // Get tracks for this mood
                     const moodTracks = data.tracks.slice(
@@ -223,7 +222,8 @@ document.addEventListener('DOMContentLoaded', () => {
                         // Add tracks to this mood section
                         moodTracks.forEach(track => {
                             const artists = track.artists.map(artist => artist.name).join(', ');
-                            moodSection.innerHTML += `<li>${track.name} - ${artists}</li>`;
+                            const album = track.album ? track.album.name : '';
+                            moodSection.innerHTML += `<li>${track.name} - ${artists}${album ? ` <span class="album-name">(${album})</span>` : ''}</li>`;
                         });
 
                         moodSection.innerHTML += '</ul>';

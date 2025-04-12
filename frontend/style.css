@@ -217,3 +217,9 @@ button:hover {
     padding: 5px 0;
     border-bottom: 1px solid #e0e0e0;
 }
+
+.album-name {
+    color: #666;
+    font-size: 0.9em;
+    font-style: italic;
+}
