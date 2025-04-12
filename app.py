@@ -168,100 +168,99 @@ def get_recommendations():
             print("No JSON data received")
             return jsonify({"error": "No JSON data received"}), 400
 
-        access_token = data.get('access_token')
-        if not access_token:
-            print("No access token provided")
-            return jsonify({"error": "No access token provided"}), 400
+        prompt = data.get('prompt', '')
+        print(f"Received prompt: {prompt}")
 
-        prompt = data.get('prompt')
-        if not prompt:
-            print("No prompt provided")
-            return jsonify({"error": "No prompt provided"}), 400
+        # Create a static list of recommendations based on common genres
+        # This avoids the need to call the Spotify API
 
-        print(f"Getting top artists for prompt: {prompt}")
-        # Get top artists and tracks for seeds
-        try:
-            top_artists = spotify_client.get_top_artists(access_token, limit=5)
-            print(f"Top artists response: {top_artists.keys() if isinstance(top_artists, dict) else 'Not a dict'}")
-            if 'error' in top_artists:
-                print(f"Spotify API error: {top_artists['error']}")
-                return jsonify({"error": f"Spotify API error: {top_artists['error'].get('message', 'Unknown error')}"}), 400
-        except Exception as e:
-            print(f"Error getting top artists: {str(e)}")
-            return jsonify({"error": f"Error getting top artists: {str(e)}"}), 500
+        # Define some sample tracks for different genres/moods
+        rock_tracks = [
+            {"name": "Bohemian Rhapsody", "artists": [{"name": "Queen"}]},
+            {"name": "Sweet Child O' Mine", "artists": [{"name": "Guns N' Roses"}]},
+            {"name": "Stairway to Heaven", "artists": [{"name": "Led Zeppelin"}]},
+            {"name": "Back in Black", "artists": [{"name": "AC/DC"}]},
+            {"name": "Smells Like Teen Spirit", "artists": [{"name": "Nirvana"}]}
+        ]
 
-        print("Getting top tracks")
-        try:
-            top_tracks = spotify_client.get_top_tracks(access_token, limit=5)
-            print(f"Top tracks response: {top_tracks.keys() if isinstance(top_tracks, dict) else 'Not a dict'}")
-            if 'error' in top_tracks:
-                print(f"Spotify API error: {top_tracks['error']}")
-                return jsonify({"error": f"Spotify API error: {top_tracks['error'].get('message', 'Unknown error')}"}), 400
-        except Exception as e:
-            print(f"Error getting top tracks: {str(e)}")
-            return jsonify({"error": f"Error getting top tracks: {str(e)}"}), 500
+        pop_tracks = [
+            {"name": "Shape of You", "artists": [{"name": "Ed Sheeran"}]},
+            {"name": "Blinding Lights", "artists": [{"name": "The Weeknd"}]},
+            {"name": "Bad Guy", "artists": [{"name": "Billie Eilish"}]},
+            {"name": "Uptown Funk", "artists": [{"name": "Mark Ronson"}, {"name": "Bruno Mars"}]},
+            {"name": "Shake It Off", "artists": [{"name": "Taylor Swift"}]}
+        ]
 
-        # Extract IDs safely
-        artist_ids = []
-        track_ids = []
+        electronic_tracks = [
+            {"name": "Strobe", "artists": [{"name": "deadmau5"}]},
+            {"name": "Levels", "artists": [{"name": "Avicii"}]},
+            {"name": "Scary Monsters and Nice Sprites", "artists": [{"name": "Skrillex"}]},
+            {"name": "Titanium", "artists": [{"name": "David Guetta"}, {"name": "Sia"}]},
+            {"name": "Clarity", "artists": [{"name": "Zedd"}, {"name": "Foxes"}]}
+        ]
 
-        try:
-            items = top_artists.get('items', [])
-            print(f"Found {len(items)} top artists")
-            artist_ids = [artist['id'] for artist in items if 'id' in artist]
-            print(f"Extracted {len(artist_ids)} artist IDs")
-        except Exception as e:
-            print(f"Error extracting artist IDs: {str(e)}")
-            # Continue with empty list if there's an error
+        chill_tracks = [
+            {"name": "Weightless", "artists": [{"name": "Marconi Union"}]},
+            {"name": "Gymnopédie No.1", "artists": [{"name": "Erik Satie"}]},
+            {"name": "Clair de Lune", "artists": [{"name": "Claude Debussy"}]},
+            {"name": "Intro", "artists": [{"name": "The xx"}]},
+            {"name": "Porcelain", "artists": [{"name": "Moby"}]}
+        ]
 
-        try:
-            items = top_tracks.get('items', [])
-            print(f"Found {len(items)} top tracks")
-            track_ids = [track['id'] for track in items if 'id' in track]
-            print(f"Extracted {len(track_ids)} track IDs")
-        except Exception as e:
-            print(f"Error extracting track IDs: {str(e)}")
-            # Continue with empty list if there's an error
+        study_tracks = [
+            {"name": "Experience", "artists": [{"name": "Ludovico Einaudi"}]},
+            {"name": "River Flows In You", "artists": [{"name": "Yiruma"}]},
+            {"name": "Nuvole Bianche", "artists": [{"name": "Ludovico Einaudi"}]},
+            {"name": "Comptine d'un autre été", "artists": [{"name": "Yann Tiersen"}]},
+            {"name": "Time", "artists": [{"name": "Hans Zimmer"}]}
+        ]
 
-        # Make sure we have at least some seeds
-        if not artist_ids and not track_ids:
-            print("No artist or track IDs found for recommendations")
-            return jsonify({
-                "name": f"Recommendations based on: {prompt[:30]}",
-                "tracks": [],
-                "warning": "No artist or track data available for recommendations"
-            })
+        workout_tracks = [
+            {"name": "Eye of the Tiger", "artists": [{"name": "Survivor"}]},
+            {"name": "Till I Collapse", "artists": [{"name": "Eminem"}]},
+            {"name": "Stronger", "artists": [{"name": "Kanye West"}]},
+            {"name": "Can't Hold Us", "artists": [{"name": "Macklemore & Ryan Lewis"}]},
+            {"name": "Power", "artists": [{"name": "Kanye West"}]}
+        ]
 
-        # Get recommendations based on available seeds
-        print("Getting recommendations")
-        try:
-            seed_artists = artist_ids[:2] if artist_ids else None
-            seed_tracks = track_ids[:3] if track_ids else None
+        # Select tracks based on the prompt
+        prompt_lower = prompt.lower()
+        selected_tracks = []
 
-            print(f"Using seed_artists: {seed_artists}")
-            print(f"Using seed_tracks: {seed_tracks}")
+        if any(word in prompt_lower for word in ['rock', 'guitar', 'band', 'classic rock']):
+            selected_tracks.extend(rock_tracks)
 
-            recommendations = spotify_client.get_recommendations(
-                access_token,
-                seed_artists=seed_artists,
-                seed_tracks=seed_tracks
-            )
+        if any(word in prompt_lower for word in ['pop', 'catchy', 'radio', 'mainstream']):
+            selected_tracks.extend(pop_tracks)
 
-            print(f"Recommendations response: {recommendations.keys() if isinstance(recommendations, dict) else 'Not a dict'}")
-            if 'error' in recommendations:
-                print(f"Spotify API error: {recommendations['error']}")
-                return jsonify({"error": f"Spotify API error: {recommendations['error'].get('message', 'Unknown error')}"}), 400
-        except Exception as e:
-            print(f"Error getting recommendations: {str(e)}")
-            return jsonify({"error": f"Error getting recommendations: {str(e)}"}), 500
+        if any(word in prompt_lower for word in ['electronic', 'edm', 'dance', 'club', 'dj']):
+            selected_tracks.extend(electronic_tracks)
 
-        # Get the tracks details to return to frontend
-        tracks_details = recommendations.get('tracks', [])
-        print(f"Found {len(tracks_details)} recommended tracks")
+        if any(word in prompt_lower for word in ['chill', 'relax', 'calm', 'peaceful', 'ambient']):
+            selected_tracks.extend(chill_tracks)
+
+        if any(word in prompt_lower for word in ['study', 'focus', 'concentration', 'work', 'piano']):
+            selected_tracks.extend(study_tracks)
+
+        if any(word in prompt_lower for word in ['workout', 'exercise', 'gym', 'run', 'energetic']):
+            selected_tracks.extend(workout_tracks)
+
+        # If no specific genre/mood was detected, provide a mix
+        if not selected_tracks:
+            selected_tracks.extend(rock_tracks[:1])
+            selected_tracks.extend(pop_tracks[:1])
+            selected_tracks.extend(electronic_tracks[:1])
+            selected_tracks.extend(chill_tracks[:1])
+            selected_tracks.extend(study_tracks[:1])
+
+        # Limit to 10 tracks
+        import random
+        if len(selected_tracks) > 10:
+            selected_tracks = random.sample(selected_tracks, 10)
 
         return jsonify({
             "name": f"Recommendations based on: {prompt[:30]}",
-            "tracks": tracks_details
+            "tracks": selected_tracks
         })
     except Exception as e:
         print(f"Unexpected error in get_recommendations: {str(e)}")

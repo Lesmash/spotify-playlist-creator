@@ -10,15 +10,20 @@ document.addEventListener('DOMContentLoaded', () => {
     const hashParams = new URLSearchParams(window.location.hash.substring(1));
     accessToken = hashParams.get('access_token');
 
+    // Show the app section by default for the demo
+    showApp();
+
     if (accessToken) {
         // Remove the access token from URL for security
         window.history.replaceState({}, document.title, window.location.pathname);
-        showApp();
+        // Show user profile and load Spotify data if logged in
+        document.getElementById('user-profile').classList.remove('hidden');
         loadUserProfile();
         loadTopArtists();
         loadTopTracks();
     } else {
-        showLogin();
+        // Show login section but keep app section visible for demo
+        document.getElementById('login-section').classList.remove('hidden');
     }
 
     // Event Listeners
@@ -42,9 +47,9 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function showApp() {
-        document.getElementById('login-section').classList.add('hidden');
+        // For the demo, we show the app section but don't hide the login section
         document.getElementById('app-section').classList.remove('hidden');
-        document.getElementById('user-profile').classList.remove('hidden');
+        // User profile is only shown when logged in
     }
 
     function loadUserProfile() {
@@ -133,7 +138,6 @@ document.addEventListener('DOMContentLoaded', () => {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                access_token: accessToken,
                 prompt: prompt
             })
         })
