@@ -112,7 +112,13 @@ CORS(app, resources={r"/*": {"origins": [RENDER_URL, "http://localhost:5000", "h
 # Get Spotify credentials from environment variables
 CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
-REDIRECT_URI = os.getenv("REDIRECT_URI", "http://localhost:5000/callback")
+# Make sure the redirect URI includes the /callback path
+base_redirect_uri = os.getenv("REDIRECT_URI", "http://localhost:5000")
+REDIRECT_URI = base_redirect_uri + ("/callback" if not base_redirect_uri.endswith("/callback") else "")
+
+# Debug: Print redirect URI (remove in production)
+print(f"ORIGINAL REDIRECT_URI: {base_redirect_uri}")
+print(f"FINAL REDIRECT_URI: {REDIRECT_URI}")
 
 # Create Spotify client
 spotify_client = SpotifyClient(CLIENT_ID, CLIENT_SECRET, REDIRECT_URI)
@@ -203,6 +209,15 @@ def user_profile():
     access_token = request.args.get('access_token')
     profile = spotify_client.get_user_profile(access_token)
     return jsonify(profile)
+
+# Debug route to check configuration
+@app.route('/debug')
+def debug():
+    return jsonify({
+        "status": "ok",
+        "redirect_uri": REDIRECT_URI,
+        "render_url": RENDER_URL
+    })
 
 # Serve frontend files
 @app.route('/')
