@@ -82,7 +82,7 @@ class SpotifyClient:
         response = requests.post(endpoint, headers=headers, data=data)
         return response.json()
 
-    def get_recommendations(self, access_token, seed_artists=None, seed_tracks=None, limit=20):
+    def get_recommendations(self, access_token, seed_artists=None, seed_tracks=None, limit=20, **kwargs):
         headers = {"Authorization": f"Bearer {access_token}"}
         endpoint = f"{self.api_base_url}recommendations"
         params = {"limit": limit}
@@ -92,6 +92,11 @@ class SpotifyClient:
         if seed_tracks:
             params["seed_tracks"] = ",".join(seed_tracks[:5])
 
+        # Add any additional parameters (like min_energy, target_valence, etc.)
+        for key, value in kwargs.items():
+            params[key] = value
+
+        print(f"Recommendation params: {params}")
         response = requests.get(endpoint, headers=headers, params=params)
         return response.json()
 
@@ -158,7 +163,259 @@ def top_tracks():
     tracks = spotify_client.get_top_tracks(access_token, time_range, limit)
     return jsonify(tracks)
 
-# New endpoint to just get recommendations without creating a playlist
+# Enhanced endpoint for creating a journey playlist
+@app.route('/create-journey', methods=['POST'])
+def create_journey():
+    try:
+        print("Received request to /create-journey")
+        data = request.json
+        if not data:
+            print("No JSON data received")
+            return jsonify({"error": "No JSON data received"}), 400
+
+        access_token = data.get('access_token')
+        if not access_token:
+            print("No access token provided")
+            return jsonify({"error": "No access token provided"}), 400
+
+        prompt = data.get('prompt', '')
+        print(f"Received journey prompt: {prompt}")
+
+        # Parse the prompt to identify mood segments
+        prompt_lower = prompt.lower()
+
+        # Define mood categories
+        high_energy_keywords = ['high energy', 'energetic', 'upbeat', 'hype', 'rage', 'intense']
+        vibey_keywords = ['vibey', 'vibe', 'ambient', 'chill', 'relaxed', 'smooth']
+        melancholic_keywords = ['melancholic', 'nostalgic', 'bittersweet', 'sad but happy', 'reflective']
+        sad_keywords = ['sad', 'emotional', 'depressing', 'heartbreak', 'somber']
+        upbeat_keywords = ['bouncy', 'happy', 'cheerful', 'joyful', 'uplifting']
+
+        # Identify which moods are present in the prompt
+        moods = []
+        if any(keyword in prompt_lower for keyword in high_energy_keywords):
+            moods.append('high_energy')
+        if any(keyword in prompt_lower for keyword in vibey_keywords):
+            moods.append('vibey')
+        if any(keyword in prompt_lower for keyword in melancholic_keywords):
+            moods.append('melancholic')
+        if any(keyword in prompt_lower for keyword in sad_keywords):
+            moods.append('sad')
+        if any(keyword in prompt_lower for keyword in upbeat_keywords):
+            moods.append('upbeat')
+
+        # If no moods detected, use a default journey
+        if not moods:
+            moods = ['high_energy', 'vibey', 'melancholic', 'sad', 'upbeat']
+
+        print(f"Detected moods: {moods}")
+
+        # Get user's top artists and tracks
+        try:
+            top_artists = spotify_client.get_top_artists(access_token, limit=20)
+            top_tracks = spotify_client.get_top_tracks(access_token, limit=20)
+
+            artist_items = top_artists.get('items', [])
+            track_items = top_tracks.get('items', [])
+
+            print(f"Retrieved {len(artist_items)} top artists and {len(track_items)} top tracks")
+
+            # Extract IDs
+            artist_ids = [artist.get('id') for artist in artist_items if artist.get('id')]
+            track_ids = [track.get('id') for track in track_items if track.get('id')]
+
+            # Create a journey playlist with tracks for each mood
+            journey_tracks = []
+
+            # Function to get recommendations for a specific mood
+            def get_mood_recommendations(mood, seed_artists, seed_tracks):
+                print(f"Getting recommendations for mood: {mood}")
+
+                # Adjust parameters based on mood
+                params = {}
+                if mood == 'high_energy':
+                    params = {
+                        'min_energy': 0.8,
+                        'min_tempo': 120,
+                        'target_valence': 0.6
+                    }
+                elif mood == 'vibey':
+                    params = {
+                        'target_energy': 0.5,
+                        'max_tempo': 110,
+                        'target_acousticness': 0.6
+                    }
+                elif mood == 'melancholic':
+                    params = {
+                        'target_energy': 0.4,
+                        'target_valence': 0.3,
+                        'target_acousticness': 0.7
+                    }
+                elif mood == 'sad':
+                    params = {
+                        'max_energy': 0.4,
+                        'max_valence': 0.3,
+                        'target_acousticness': 0.8
+                    }
+                elif mood == 'upbeat':
+                    params = {
+                        'min_energy': 0.7,
+                        'min_valence': 0.7,
+                        'target_danceability': 0.8
+                    }
+
+                # Get recommendations with mood-specific parameters
+                try:
+                    # Use a subset of seed artists and tracks for each mood to get variety
+                    import random
+                    mood_seed_artists = random.sample(seed_artists, min(2, len(seed_artists))) if seed_artists else None
+                    mood_seed_tracks = random.sample(seed_tracks, min(3, len(seed_tracks))) if seed_tracks else None
+
+                    # Add the parameters to the API call
+                    recommendations = spotify_client.get_recommendations(
+                        access_token,
+                        seed_artists=mood_seed_artists,
+                        seed_tracks=mood_seed_tracks,
+                        **params
+                    )
+
+                    if 'tracks' in recommendations:
+                        # Get 3-5 tracks for each mood
+                        mood_tracks = recommendations.get('tracks', [])[:4]
+                        print(f"Got {len(mood_tracks)} tracks for mood: {mood}")
+                        return mood_tracks
+                    else:
+                        print(f"No tracks found for mood: {mood}")
+                        return []
+                except Exception as e:
+                    print(f"Error getting recommendations for mood {mood}: {str(e)}")
+                    return []
+
+            # Get tracks for each mood in the journey
+            for mood in moods:
+                mood_tracks = get_mood_recommendations(mood, artist_ids, track_ids)
+                journey_tracks.extend(mood_tracks)
+
+            print(f"Created journey with {len(journey_tracks)} total tracks")
+
+            # Return the journey tracks
+            return jsonify({
+                "name": f"Music Journey: {prompt[:30]}",
+                "tracks": journey_tracks
+            })
+
+        except Exception as e:
+            print(f"Error creating journey: {str(e)}")
+            import traceback
+            traceback.print_exc()
+            return jsonify({"error": f"Error creating journey: {str(e)}"}), 500
+
+    except Exception as e:
+        print(f"Unexpected error in create_journey: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+# Enhanced endpoint for personalized recommendations using Spotify API
+@app.route('/get-personalized-recommendations', methods=['POST'])
+def get_personalized_recommendations():
+    try:
+        print("Received request to /get-personalized-recommendations")
+        data = request.json
+        if not data:
+            print("No JSON data received")
+            return jsonify({"error": "No JSON data received"}), 400
+
+        access_token = data.get('access_token')
+        if not access_token:
+            print("No access token provided")
+            return jsonify({"error": "No access token provided"}), 400
+
+        prompt = data.get('prompt', '')
+        print(f"Received prompt: {prompt}")
+
+        # Get user profile for debugging
+        try:
+            print("Getting user profile...")
+            user_profile = spotify_client.get_user_profile(access_token)
+            if 'error' in user_profile:
+                print(f"Error getting user profile: {user_profile['error']}")
+                return jsonify({"error": f"Spotify API error: {user_profile['error'].get('message', 'Unknown error')}"}), 400
+            print(f"User profile retrieved: {user_profile.get('display_name')}")
+        except Exception as e:
+            print(f"Exception getting user profile: {str(e)}")
+            return jsonify({"error": f"Error getting user profile: {str(e)}"}), 500
+
+        # Get top artists
+        try:
+            print("Getting top artists...")
+            top_artists = spotify_client.get_top_artists(access_token, limit=10)
+            if 'error' in top_artists:
+                print(f"Error getting top artists: {top_artists['error']}")
+                return jsonify({"error": f"Spotify API error: {top_artists['error'].get('message', 'Unknown error')}"}), 400
+
+            artist_items = top_artists.get('items', [])
+            print(f"Retrieved {len(artist_items)} top artists")
+            for i, artist in enumerate(artist_items[:3]):
+                print(f"Top artist {i+1}: {artist.get('name')}")
+        except Exception as e:
+            print(f"Exception getting top artists: {str(e)}")
+            return jsonify({"error": f"Error getting top artists: {str(e)}"}), 500
+
+        # Get top tracks
+        try:
+            print("Getting top tracks...")
+            top_tracks = spotify_client.get_top_tracks(access_token, limit=10)
+            if 'error' in top_tracks:
+                print(f"Error getting top tracks: {top_tracks['error']}")
+                return jsonify({"error": f"Spotify API error: {top_tracks['error'].get('message', 'Unknown error')}"}), 400
+
+            track_items = top_tracks.get('items', [])
+            print(f"Retrieved {len(track_items)} top tracks")
+            for i, track in enumerate(track_items[:3]):
+                print(f"Top track {i+1}: {track.get('name')} by {', '.join([artist.get('name') for artist in track.get('artists', [])])}")
+        except Exception as e:
+            print(f"Exception getting top tracks: {str(e)}")
+            return jsonify({"error": f"Error getting top tracks: {str(e)}"}), 500
+
+        # Extract IDs for recommendations
+        artist_ids = [artist.get('id') for artist in artist_items if artist.get('id')]
+        track_ids = [track.get('id') for track in track_items if track.get('id')]
+
+        print(f"Using {len(artist_ids)} artist IDs and {len(track_ids)} track IDs for recommendations")
+
+        # Get recommendations
+        try:
+            print("Getting recommendations...")
+            recommendations = spotify_client.get_recommendations(
+                access_token,
+                seed_artists=artist_ids[:2] if artist_ids else None,
+                seed_tracks=track_ids[:3] if track_ids else None
+            )
+
+            if 'error' in recommendations:
+                print(f"Error getting recommendations: {recommendations['error']}")
+                return jsonify({"error": f"Spotify API error: {recommendations['error'].get('message', 'Unknown error')}"}), 400
+
+            tracks = recommendations.get('tracks', [])
+            print(f"Retrieved {len(tracks)} recommended tracks")
+            for i, track in enumerate(tracks[:3]):
+                print(f"Recommendation {i+1}: {track.get('name')} by {', '.join([artist.get('name') for artist in track.get('artists', [])])}")
+
+            return jsonify({
+                "name": f"Personalized recommendations based on: {prompt[:30]}",
+                "tracks": tracks
+            })
+        except Exception as e:
+            print(f"Exception getting recommendations: {str(e)}")
+            return jsonify({"error": f"Error getting recommendations: {str(e)}"}), 500
+    except Exception as e:
+        print(f"Unexpected error in get_personalized_recommendations: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return jsonify({"error": str(e)}), 500
+
+# Keep the demo endpoint for fallback
 @app.route('/get-recommendations', methods=['POST'])
 def get_recommendations():
     try:
@@ -171,8 +428,18 @@ def get_recommendations():
         prompt = data.get('prompt', '')
         print(f"Received prompt: {prompt}")
 
+        # Try to use personalized recommendations if access token is provided
+        access_token = data.get('access_token')
+        if access_token:
+            try:
+                # Create a new request to the personalized endpoint
+                return get_personalized_recommendations()
+            except Exception as e:
+                print(f"Failed to get personalized recommendations, falling back to demo: {str(e)}")
+                # Fall back to demo recommendations
+
         # Create a static list of recommendations based on common genres
-        # This avoids the need to call the Spotify API
+        # This is used as a fallback when Spotify API fails
 
         # Define some sample tracks for different genres/moods
         rock_tracks = [

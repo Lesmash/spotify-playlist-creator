@@ -10,7 +10,7 @@
     <div class="container">
         <header>
             <h1>Spotify Music Recommendations</h1>
-            <p class="demo-notice">Demo Version - Recommendations are based on keywords in your prompt</p>
+            <p class="demo-notice">Connect with Spotify for personalized recommendations based on your listening history!</p>
             <div id="user-profile" class="hidden">
                 <img id="profile-image" src="" alt="Profile">
                 <span id="profile-name"></span>
@@ -18,10 +18,11 @@
         </header>
 
         <div id="login-section">
-            <h2>Music Recommendations Demo</h2>
-            <p>This demo provides music recommendations based on keywords in your prompt. No Spotify account required!</p>
-            <p class="optional-login">Optionally, you can connect your Spotify account:</p>
+            <h2>Personalized Music Journey</h2>
+            <p>Get recommendations that follow an emotional journey based on <strong>your</strong> music taste.</p>
+            <p>For the best experience with personalized recommendations:</p>
             <button id="login-button">Connect with Spotify</button>
+            <p class="note">Without connecting, you'll get generic recommendations based on keywords.</p>
         </div>
 
         <div id="app-section" class="hidden">
@@ -34,10 +35,10 @@
             </div>
 
             <div class="playlist-creator">
-                <h2>Get Music Recommendations</h2>
-                <p>Describe what kind of music you're in the mood for:</p>
-                <textarea id="playlist-prompt" placeholder="e.g., A chill music for studying with piano"></textarea>
-                <button id="create-playlist-button">Get Recommendations</button>
+                <h2>Create Your Music Journey</h2>
+                <p>Describe the emotional journey you want your playlist to take:</p>
+                <textarea id="playlist-prompt" placeholder="e.g., Start with high energy tracks, then transition to chill vibes, and end with emotional songs"></textarea>
+                <button id="create-playlist-button">Create Music Journey</button>
                 <div id="playlist-result" class="hidden">
                     <div id="playlist-link"></div>
                 </div>

@@ -129,16 +129,17 @@ document.addEventListener('DOMContentLoaded', () => {
         }
 
         const createButton = document.getElementById('create-playlist-button');
-        createButton.textContent = 'Getting Recommendations...';
+        createButton.textContent = 'Creating Journey...';
         createButton.disabled = true;
 
-        fetch(`${API_BASE_URL}/get-recommendations`, {
+        fetch(`${API_BASE_URL}/create-journey`, {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json'
             },
             body: JSON.stringify({
-                prompt: prompt
+                prompt: prompt,
+                access_token: accessToken
             })
         })
         .then(response => {
@@ -149,7 +150,7 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .then(data => {
             console.log('Received response:', data);
-            createButton.textContent = 'Get Recommendations';
+            createButton.textContent = 'Create Music Journey';
             createButton.disabled = false;
 
             const resultElement = document.getElementById('playlist-result');
@@ -184,18 +185,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 linkElement.appendChild(warningElement);
             }
 
-            // Display recommended tracks
+            // Display recommended tracks as a journey
             if (data.tracks && data.tracks.length > 0) {
                 const tracksList = document.createElement('div');
                 tracksList.className = 'playlist-tracks';
-                tracksList.innerHTML = '<h4>Recommended Tracks:</h4><ul>';
+                tracksList.innerHTML = '<h4>Your Music Journey:</h4>';
 
-                data.tracks.forEach(track => {
-                    const artists = track.artists.map(artist => artist.name).join(', ');
-                    tracksList.innerHTML += `<li>${track.name} - ${artists}</li>`;
+                // Define the moods we're looking for
+                const moods = ['high_energy', 'vibey', 'melancholic', 'sad', 'upbeat'];
+                const moodNames = {
+                    'high_energy': 'High Energy',
+                    'vibey': 'Vibey & Ambient',
+                    'melancholic': 'Melancholic & Nostalgic',
+                    'sad': 'Emotional & Sad',
+                    'upbeat': 'Upbeat & Bouncy'
+                };
+
+                // Group tracks by mood based on their position in the array
+                // This assumes the tracks are returned in the order of the moods
+                const tracksPerMood = Math.ceil(data.tracks.length / moods.length);
+
+                // Create a section for each mood
+                let trackIndex = 0;
+                moods.forEach((mood, moodIndex) => {
+                    // Get tracks for this mood
+                    const moodTracks = data.tracks.slice(
+                        moodIndex * tracksPerMood,
+                        Math.min((moodIndex + 1) * tracksPerMood, data.tracks.length)
+                    );
+
+                    if (moodTracks.length > 0) {
+                        // Create a section for this mood
+                        const moodSection = document.createElement('div');
+                        moodSection.className = 'mood-section';
+                        moodSection.innerHTML = `<h5>${moodNames[mood]}</h5><ul>`;
+
+                        // Add tracks to this mood section
+                        moodTracks.forEach(track => {
+                            const artists = track.artists.map(artist => artist.name).join(', ');
+                            moodSection.innerHTML += `<li>${track.name} - ${artists}</li>`;
+                        });
+
+                        moodSection.innerHTML += '</ul>';
+                        tracksList.appendChild(moodSection);
+                    }
                 });
 
-                tracksList.innerHTML += '</ul>';
                 resultElement.appendChild(tracksList);
             } else {
                 const noTracksElement = document.createElement('p');
@@ -205,9 +240,9 @@ document.addEventListener('DOMContentLoaded', () => {
         })
         .catch(error => {
             console.error('Error:', error);
-            createButton.textContent = 'Get Recommendations';
+            createButton.textContent = 'Create Music Journey';
             createButton.disabled = false;
-            alert(`Failed to get recommendations: ${error.message}`);
+            alert(`Failed to create music journey: ${error.message}`);
         });
     }
 });

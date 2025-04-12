@@ -40,10 +40,11 @@ h1, h2, h3 {
     text-align: center;
 }
 
-.optional-login {
-    margin-top: 20px;
+.note {
+    margin-top: 15px;
     font-style: italic;
     color: #666;
+    font-size: 14px;
 }
 
 button {
@@ -192,4 +193,27 @@ button:hover {
     padding: 15px;
     background-color: #f9f9f9;
     border-radius: 8px;
+}
+
+.mood-section {
+    margin-top: 15px;
+    padding: 10px;
+    border-radius: 6px;
+    background-color: #f0f0f0;
+}
+
+.mood-section h5 {
+    margin-bottom: 8px;
+    color: #333;
+    font-size: 16px;
+}
+
+.mood-section ul {
+    list-style-type: none;
+    padding-left: 10px;
+}
+
+.mood-section li {
+    padding: 5px 0;
+    border-bottom: 1px solid #e0e0e0;
 }
