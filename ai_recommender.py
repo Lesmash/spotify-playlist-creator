@@ -143,9 +143,25 @@ def create_mixed_artist_journey(prompt, top_artists, top_tracks):
     print("Creating mixed artist journey with user's actual top artists")
     prompt_lower = prompt.lower()
 
+    # Check for track limit requests
+    track_limit = 20  # Default
+    if '10 tracks' in prompt_lower or 'ten tracks' in prompt_lower:
+        track_limit = 10
+        print(f"User requested {track_limit} tracks")
+
+    # Check for artist exclusions
+    excluded_artists = []
+    if 'exclude kendrick' in prompt_lower or 'exclude kendrick lamar' in prompt_lower:
+        excluded_artists.append('Kendrick Lamar')
+        print("Excluding Kendrick Lamar (except as a feature)")
+
+    if 'exclude xxxtentacion' in prompt_lower or 'exclude xxx' in prompt_lower:
+        excluded_artists.append('XXXTENTACION')
+        print("Excluding XXXTENTACION")
+
     # Extract top artist names for easier reference
-    top_artist_names = [artist.get('name', '') for artist in top_artists if artist.get('name')][:10]
-    print(f"User's top artists: {', '.join(top_artist_names)}")
+    top_artist_names = [artist.get('name', '') for artist in top_artists if artist.get('name') and artist.get('name') not in excluded_artists][:10]
+    print(f"User's top artists (after exclusions): {', '.join(top_artist_names)}")
 
     # Check if specific artists are mentioned in the prompt
     specific_artists = {}
@@ -287,8 +303,8 @@ def create_mixed_artist_journey(prompt, top_artists, top_tracks):
     # Add tracks from other top artists
     # We'll add some popular tracks for common top artists
 
-    # Kendrick Lamar
-    if 'Kendrick Lamar' in top_artist_names:
+    # Kendrick Lamar - only as a feature if excluded
+    if 'Kendrick Lamar' in top_artist_names and 'Kendrick Lamar' not in excluded_artists:
         high_energy_tracks.extend([
             {
                 'name': "DNA.",
@@ -531,7 +547,7 @@ def create_mixed_artist_journey(prompt, top_artists, top_tracks):
             }
         ])
 
-    if len(sad_tracks) < 3:
+    if len(sad_tracks) < 3 and 'XXXTENTACION' not in excluded_artists:
         sad_tracks.extend([
             {
                 'name': "Jocelyn Flores",
@@ -539,6 +555,17 @@ def create_mixed_artist_journey(prompt, top_artists, top_tracks):
                 'album': {'name': "17"},
                 'mood': "sad",
                 'reason': "Deeply emotional tribute to a friend who passed away"
+            }
+        ])
+    elif len(sad_tracks) < 3:
+        # Alternative sad track if XXXTENTACION is excluded
+        sad_tracks.extend([
+            {
+                'name': "Hurt",
+                'artists': [{'name': "Johnny Cash"}],
+                'album': {'name': "American IV: The Man Comes Around"},
+                'mood': "sad",
+                'reason': "Powerful cover filled with regret and reflection"
             }
         ])
 
@@ -579,12 +606,70 @@ def create_mixed_artist_journey(prompt, top_artists, top_tracks):
     random.shuffle(sad_tracks)
     random.shuffle(upbeat_tracks)
 
-    # Add tracks to the journey
-    journey.extend(high_energy_tracks)
-    journey.extend(vibey_tracks)
-    journey.extend(melancholic_tracks)
-    journey.extend(sad_tracks)
-    journey.extend(upbeat_tracks)
+    # Check for different outro request
+    different_outro = 'different outro' in prompt_lower
+    if different_outro and 'Playboi Carti' in specific_artists:
+        print("User requested a different outro than Playboi Carti")
+        # Replace the finale tracks with something else
+        if 'Kanye West' in top_artist_names:
+            finale_tracks = [{
+                'name': "Stronger",
+                'artists': [{'name': "Kanye West"}],
+                'album': {'name': "Graduation"},
+                'mood': "high_energy",
+                'reason': "Triumphant finale that combines electronic elements with motivational themes"
+            }]
+        elif 'Travis Scott' in top_artist_names:
+            finale_tracks = [{
+                'name': "STARGAZING",
+                'artists': [{'name': "Travis Scott"}],
+                'album': {'name': "Astroworld"},
+                'mood': "high_energy",
+                'reason': "Psychedelic track with a beat switch that serves as a perfect finale"
+            }]
+        elif 'Drake' in top_artist_names:
+            finale_tracks = [{
+                'name': "Headlines",
+                'artists': [{'name': "Drake"}],
+                'album': {'name': "Take Care"},
+                'mood': "high_energy",
+                'reason': "Confident track with a triumphant feel that works well as a finale"
+            }]
+        else:
+            finale_tracks = [{
+                'name': "Stronger",
+                'artists': [{'name': "Kanye West"}],
+                'album': {'name': "Graduation"},
+                'mood': "high_energy",
+                'reason': "Triumphant finale that combines electronic elements with motivational themes"
+            }]
+
+    # Create a balanced journey with the requested number of tracks
+    # We'll allocate tracks proportionally to each mood
+    journey = []
+
+    # Add the specific intro track if requested
+    if intro_track:
+        journey.append(intro_track)
+        track_limit -= 1  # Reduce the limit since we've added the intro
+
+    # Calculate how many tracks to include from each mood category
+    # We want to maintain the emotional journey while respecting the track limit
+    remaining_tracks = track_limit - len(finale_tracks)
+    tracks_per_mood = max(1, remaining_tracks // 4)  # At least 1 track per mood
+
+    # Add tracks from each mood category
+    journey.extend(high_energy_tracks[:tracks_per_mood])
+    journey.extend(vibey_tracks[:tracks_per_mood])
+    journey.extend(melancholic_tracks[:tracks_per_mood])
+    journey.extend(sad_tracks[:tracks_per_mood])
+
+    # If we still have room, add some upbeat tracks
+    remaining = track_limit - len(journey) - len(finale_tracks)
+    if remaining > 0:
+        journey.extend(upbeat_tracks[:remaining])
+
+    # Add the finale tracks
     journey.extend(finale_tracks)
 
     return journey
