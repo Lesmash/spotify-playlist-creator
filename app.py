@@ -162,33 +162,111 @@ def top_tracks():
 @app.route('/get-recommendations', methods=['POST'])
 def get_recommendations():
     try:
+        print("Received request to /get-recommendations")
         data = request.json
+        if not data:
+            print("No JSON data received")
+            return jsonify({"error": "No JSON data received"}), 400
+
         access_token = data.get('access_token')
+        if not access_token:
+            print("No access token provided")
+            return jsonify({"error": "No access token provided"}), 400
+
         prompt = data.get('prompt')
+        if not prompt:
+            print("No prompt provided")
+            return jsonify({"error": "No prompt provided"}), 400
 
+        print(f"Getting top artists for prompt: {prompt}")
         # Get top artists and tracks for seeds
-        top_artists = spotify_client.get_top_artists(access_token, limit=5)
-        top_tracks = spotify_client.get_top_tracks(access_token, limit=5)
+        try:
+            top_artists = spotify_client.get_top_artists(access_token, limit=5)
+            print(f"Top artists response: {top_artists.keys() if isinstance(top_artists, dict) else 'Not a dict'}")
+            if 'error' in top_artists:
+                print(f"Spotify API error: {top_artists['error']}")
+                return jsonify({"error": f"Spotify API error: {top_artists['error'].get('message', 'Unknown error')}"}), 400
+        except Exception as e:
+            print(f"Error getting top artists: {str(e)}")
+            return jsonify({"error": f"Error getting top artists: {str(e)}"}), 500
 
-        artist_ids = [artist['id'] for artist in top_artists.get('items', [])]
-        track_ids = [track['id'] for track in top_tracks.get('items', [])]
+        print("Getting top tracks")
+        try:
+            top_tracks = spotify_client.get_top_tracks(access_token, limit=5)
+            print(f"Top tracks response: {top_tracks.keys() if isinstance(top_tracks, dict) else 'Not a dict'}")
+            if 'error' in top_tracks:
+                print(f"Spotify API error: {top_tracks['error']}")
+                return jsonify({"error": f"Spotify API error: {top_tracks['error'].get('message', 'Unknown error')}"}), 400
+        except Exception as e:
+            print(f"Error getting top tracks: {str(e)}")
+            return jsonify({"error": f"Error getting top tracks: {str(e)}"}), 500
 
-        # Get recommendations based on top artists and tracks
-        recommendations = spotify_client.get_recommendations(
-            access_token,
-            seed_artists=artist_ids[:2],
-            seed_tracks=track_ids[:3]
-        )
+        # Extract IDs safely
+        artist_ids = []
+        track_ids = []
+
+        try:
+            items = top_artists.get('items', [])
+            print(f"Found {len(items)} top artists")
+            artist_ids = [artist['id'] for artist in items if 'id' in artist]
+            print(f"Extracted {len(artist_ids)} artist IDs")
+        except Exception as e:
+            print(f"Error extracting artist IDs: {str(e)}")
+            # Continue with empty list if there's an error
+
+        try:
+            items = top_tracks.get('items', [])
+            print(f"Found {len(items)} top tracks")
+            track_ids = [track['id'] for track in items if 'id' in track]
+            print(f"Extracted {len(track_ids)} track IDs")
+        except Exception as e:
+            print(f"Error extracting track IDs: {str(e)}")
+            # Continue with empty list if there's an error
+
+        # Make sure we have at least some seeds
+        if not artist_ids and not track_ids:
+            print("No artist or track IDs found for recommendations")
+            return jsonify({
+                "name": f"Recommendations based on: {prompt[:30]}",
+                "tracks": [],
+                "warning": "No artist or track data available for recommendations"
+            })
+
+        # Get recommendations based on available seeds
+        print("Getting recommendations")
+        try:
+            seed_artists = artist_ids[:2] if artist_ids else None
+            seed_tracks = track_ids[:3] if track_ids else None
+
+            print(f"Using seed_artists: {seed_artists}")
+            print(f"Using seed_tracks: {seed_tracks}")
+
+            recommendations = spotify_client.get_recommendations(
+                access_token,
+                seed_artists=seed_artists,
+                seed_tracks=seed_tracks
+            )
+
+            print(f"Recommendations response: {recommendations.keys() if isinstance(recommendations, dict) else 'Not a dict'}")
+            if 'error' in recommendations:
+                print(f"Spotify API error: {recommendations['error']}")
+                return jsonify({"error": f"Spotify API error: {recommendations['error'].get('message', 'Unknown error')}"}), 400
+        except Exception as e:
+            print(f"Error getting recommendations: {str(e)}")
+            return jsonify({"error": f"Error getting recommendations: {str(e)}"}), 500
 
         # Get the tracks details to return to frontend
         tracks_details = recommendations.get('tracks', [])
+        print(f"Found {len(tracks_details)} recommended tracks")
 
         return jsonify({
             "name": f"Recommendations based on: {prompt[:30]}",
             "tracks": tracks_details
         })
     except Exception as e:
-        print(f"Error in get_recommendations: {str(e)}")
+        print(f"Unexpected error in get_recommendations: {str(e)}")
+        import traceback
+        traceback.print_exc()
         return jsonify({"error": str(e)}), 500
 
 @app.route('/create-playlist', methods=['POST'])

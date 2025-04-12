@@ -144,14 +144,41 @@ document.addEventListener('DOMContentLoaded', () => {
             return response.json();
         })
         .then(data => {
+            console.log('Received response:', data);
             createButton.textContent = 'Get Recommendations';
             createButton.disabled = false;
 
             const resultElement = document.getElementById('playlist-result');
             resultElement.classList.remove('hidden');
 
-            const linkElement = document.getElementById('playlist-link');
-            linkElement.innerHTML = `<h3>${data.name}</h3>`;
+            // Clear previous results
+            resultElement.innerHTML = '';
+
+            const linkElement = document.createElement('div');
+            linkElement.id = 'playlist-link';
+            resultElement.appendChild(linkElement);
+
+            // Check for error in the response
+            if (data.error) {
+                console.error('Error in response:', data.error);
+                linkElement.innerHTML = `<h3 class="error">Error: ${data.error}</h3>`;
+                return;
+            }
+
+            // Check if name exists
+            if (data.name) {
+                linkElement.innerHTML = `<h3>${data.name}</h3>`;
+            } else {
+                linkElement.innerHTML = `<h3>Your Recommendations</h3>`;
+            }
+
+            // Display warning if any
+            if (data.warning) {
+                const warningElement = document.createElement('div');
+                warningElement.className = 'warning';
+                warningElement.textContent = data.warning;
+                linkElement.appendChild(warningElement);
+            }
 
             // Display recommended tracks
             if (data.tracks && data.tracks.length > 0) {
@@ -160,13 +187,16 @@ document.addEventListener('DOMContentLoaded', () => {
                 tracksList.innerHTML = '<h4>Recommended Tracks:</h4><ul>';
 
                 data.tracks.forEach(track => {
-                    tracksList.innerHTML += `<li>${track.name} - ${track.artists[0].name}</li>`;
+                    const artists = track.artists.map(artist => artist.name).join(', ');
+                    tracksList.innerHTML += `<li>${track.name} - ${artists}</li>`;
                 });
 
                 tracksList.innerHTML += '</ul>';
                 resultElement.appendChild(tracksList);
-            } else if (data.error) {
-                alert(`Error: ${data.error}`);
+            } else {
+                const noTracksElement = document.createElement('p');
+                noTracksElement.textContent = 'No tracks found based on your prompt. Try a different description.';
+                resultElement.appendChild(noTracksElement);
             }
         })
         .catch(error => {
