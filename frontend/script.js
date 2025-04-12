@@ -1,6 +1,7 @@
 document.addEventListener('DOMContentLoaded', () => {
-    // This will be replaced with your deployed backend URL
-    const API_BASE_URL = 'https://spotify-playlist-creator-backend.onrender.com';
+    // Replace this with your actual deployed backend URL
+    // Example: https://your-app-name.onrender.com
+    const API_BASE_URL = 'https://your-backend-url.onrender.com';
     let accessToken = null;
 
     // Check if we have an access token in the URL (after redirect)

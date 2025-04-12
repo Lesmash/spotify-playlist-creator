@@ -11,9 +11,9 @@ A web application that uses the Spotify API to create personalized playlists bas
 3. Set the source to the main branch
 4. Your site will be published at `https://<your-github-username>.github.io/spotify-playlist-creator/`
 
-### Backend (Render, Heroku, or similar)
+### Backend (Render)
 
-1. Create an account on [Render](https://render.com/) or [Heroku](https://www.heroku.com/)
+1. Create an account on [Render](https://render.com/)
 2. Create a new Web Service and connect it to your GitHub repository
 3. Set the following environment variables:
    ```
@@ -21,7 +21,11 @@ A web application that uses the Spotify API to create personalized playlists bas
    SPOTIFY_CLIENT_SECRET=your_spotify_client_secret
    REDIRECT_URI=https://your-backend-url.onrender.com/callback
    ```
-4. Deploy the application
+4. Use the following settings:
+   - Build Command: `pip install -r requirements.txt`
+   - Start Command: `gunicorn wsgi:app`
+   - Python Version: 3.9 (or your preferred version)
+5. Click 'Create Web Service' to deploy the application
 
 ### Spotify Developer Setup
 

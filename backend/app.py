@@ -15,7 +15,9 @@ app = Flask(__name__)
 app.secret_key = os.urandom(24)
 
 # Configure CORS to allow requests from GitHub Pages and localhost
-CORS(app, resources={r"/*": {"origins": ["https://<your-github-username>.github.io", "http://localhost:3000", "http://127.0.0.1:3000"]}}, supports_credentials=True)
+# Replace YOUR_GITHUB_USERNAME with your actual GitHub username
+GITHUB_PAGES_URL = "https://YOUR_GITHUB_USERNAME.github.io"
+CORS(app, resources={r"/*": {"origins": [GITHUB_PAGES_URL, "http://localhost:3000", "http://127.0.0.1:3000"]}}, supports_credentials=True)
 
 CLIENT_ID = os.getenv("SPOTIFY_CLIENT_ID")
 CLIENT_SECRET = os.getenv("SPOTIFY_CLIENT_SECRET")
@@ -38,7 +40,8 @@ def callback():
     access_token = token_info.get('access_token')
 
     # Redirect to GitHub Pages site
-    return redirect(f"https://<your-github-username>.github.io/spotify-playlist-creator/#access_token={access_token}")
+    # Use the same GitHub username as defined above
+    return redirect(f"{GITHUB_PAGES_URL}/spotify-playlist-creator/#access_token={access_token}")
 
 @app.route('/top-artists')
 def top_artists():
