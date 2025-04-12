@@ -6,6 +6,7 @@ import base64
 import json
 from urllib.parse import urlencode
 from dotenv import load_dotenv
+from ai_recommender import generate_recommendations
 
 # Load environment variables
 load_dotenv()
@@ -175,7 +176,7 @@ def top_tracks():
     tracks = spotify_client.get_top_tracks(access_token, time_range, limit)
     return jsonify(tracks)
 
-# Enhanced endpoint for creating a journey playlist
+# AI-powered endpoint for creating a music journey
 @app.route('/create-journey', methods=['POST'])
 def create_journey():
     try:
@@ -185,300 +186,41 @@ def create_journey():
             print("No JSON data received")
             return jsonify({"error": "No JSON data received"}), 400
 
-        access_token = data.get('access_token')
-        if not access_token:
-            print("No access token provided")
-            return jsonify({"error": "No access token provided"}), 400
-
         prompt = data.get('prompt', '')
         print(f"Received journey prompt: {prompt}")
 
-        # Parse the prompt to identify mood segments and specific artists
-        prompt_lower = prompt.lower()
+        # Get access token if available (optional)
+        access_token = data.get('access_token')
+        top_artists = None
+        top_tracks = None
 
-        # Check for specific artist mentions
-        specific_artists = []
-        if 'playboi carti' in prompt_lower:
-            specific_artists.append('Playboi Carti')
-            print("Detected specific artist request: Playboi Carti")
+        # If we have an access token, get the user's top artists and tracks
+        if access_token:
+            try:
+                print("Getting user's Spotify data...")
+                top_artists_response = spotify_client.get_top_artists(access_token, limit=20)
+                top_tracks_response = spotify_client.get_top_tracks(access_token, limit=20)
 
-        # Define mood categories
-        high_energy_keywords = ['high energy', 'energetic', 'upbeat', 'hype', 'rage', 'intense']
-        vibey_keywords = ['vibey', 'vibe', 'ambient', 'chill', 'relaxed', 'smooth']
-        melancholic_keywords = ['melancholic', 'nostalgic', 'bittersweet', 'sad but happy', 'reflective']
-        sad_keywords = ['sad', 'emotional', 'depressing', 'heartbreak', 'somber']
-        upbeat_keywords = ['bouncy', 'happy', 'cheerful', 'joyful', 'uplifting']
+                if 'items' in top_artists_response:
+                    top_artists = top_artists_response.get('items', [])
+                    print(f"Retrieved {len(top_artists)} top artists")
 
-        # Identify which moods are present in the prompt
-        moods = []
-        if any(keyword in prompt_lower for keyword in high_energy_keywords):
-            moods.append('high_energy')
-        if any(keyword in prompt_lower for keyword in vibey_keywords):
-            moods.append('vibey')
-        if any(keyword in prompt_lower for keyword in melancholic_keywords):
-            moods.append('melancholic')
-        if any(keyword in prompt_lower for keyword in sad_keywords):
-            moods.append('sad')
-        if any(keyword in prompt_lower for keyword in upbeat_keywords):
-            moods.append('upbeat')
+                if 'items' in top_tracks_response:
+                    top_tracks = top_tracks_response.get('items', [])
+                    print(f"Retrieved {len(top_tracks)} top tracks")
+            except Exception as e:
+                print(f"Error getting Spotify data: {str(e)}")
+                # Continue without Spotify data
 
-        # If no moods detected, use a default journey
-        if not moods:
-            moods = ['high_energy', 'vibey', 'melancholic', 'sad', 'upbeat']
+        # Use AI to generate recommendations
+        print("Generating AI recommendations...")
+        ai_recommendations = generate_recommendations(prompt, top_artists, top_tracks)
 
-        print(f"Detected moods: {moods}")
-
-        # Get user's top artists and tracks
-        try:
-            top_artists = spotify_client.get_top_artists(access_token, limit=20)
-            top_tracks = spotify_client.get_top_tracks(access_token, limit=20)
-
-            artist_items = top_artists.get('items', [])
-            track_items = top_tracks.get('items', [])
-
-            print(f"Retrieved {len(artist_items)} top artists and {len(track_items)} top tracks")
-
-            # Extract IDs
-            artist_ids = [artist.get('id') for artist in artist_items if artist.get('id')]
-            track_ids = [track.get('id') for track in track_items if track.get('id')]
-
-            # Create a journey playlist with tracks for each mood
-            journey_tracks = []
-
-            # Handle specific track requests
-            specific_track_requests = []
-            if 'playboi carti' in prompt_lower and 'walk' in prompt_lower:
-                print("Looking for WALK by Playboi Carti")
-                try:
-                    search_results = spotify_client.search_tracks(access_token, "WALK Playboi Carti")
-                    if 'tracks' in search_results and search_results['tracks']['items']:
-                        walk_track = search_results['tracks']['items'][0]
-                        print(f"Found WALK by Playboi Carti: {walk_track['name']} - {walk_track['artists'][0]['name']}")
-                        specific_track_requests.append({
-                            'position': 'start',
-                            'track': walk_track
-                        })
-                except Exception as e:
-                    print(f"Error searching for WALK by Playboi Carti: {str(e)}")
-
-            # Look for a Playboi Carti song for the end
-            if 'playboi carti' in prompt_lower and 'end' in prompt_lower:
-                print("Looking for a Playboi Carti song for the end")
-                try:
-                    search_results = spotify_client.search_tracks(access_token, "Playboi Carti experimental", limit=10)
-                    if 'tracks' in search_results and search_results['tracks']['items']:
-                        # Try to find a different track than WALK
-                        end_tracks = [track for track in search_results['tracks']['items']
-                                    if track['name'].lower() != 'walk']
-                        if end_tracks:
-                            end_track = end_tracks[0]
-                            print(f"Found Playboi Carti song for end: {end_track['name']}")
-                            specific_track_requests.append({
-                                'position': 'end',
-                                'track': end_track
-                            })
-                except Exception as e:
-                    print(f"Error searching for Playboi Carti end song: {str(e)}")
-
-            # Function to get recommendations for a specific mood
-            def get_mood_recommendations(mood, seed_artists, seed_tracks):
-                print(f"Getting recommendations for mood: {mood}")
-
-                # Adjust parameters based on mood
-                params = {}
-                if mood == 'high_energy':
-                    params = {
-                        'min_energy': 0.8,
-                        'min_tempo': 120,
-                        'target_valence': 0.6
-                    }
-                elif mood == 'vibey':
-                    params = {
-                        'target_energy': 0.5,
-                        'max_tempo': 110,
-                        'target_acousticness': 0.6
-                    }
-                elif mood == 'melancholic':
-                    params = {
-                        'target_energy': 0.4,
-                        'target_valence': 0.3,
-                        'target_acousticness': 0.7
-                    }
-                elif mood == 'sad':
-                    params = {
-                        'max_energy': 0.4,
-                        'max_valence': 0.3,
-                        'target_acousticness': 0.8
-                    }
-                elif mood == 'upbeat':
-                    params = {
-                        'min_energy': 0.7,
-                        'min_valence': 0.7,
-                        'target_danceability': 0.8
-                    }
-
-                # Get recommendations with mood-specific parameters
-                try:
-                    # Use a subset of seed artists and tracks for each mood to get variety
-                    import random
-                    mood_seed_artists = random.sample(seed_artists, min(2, len(seed_artists))) if seed_artists else None
-                    mood_seed_tracks = random.sample(seed_tracks, min(3, len(seed_tracks))) if seed_tracks else None
-
-                    # Add the parameters to the API call
-                    recommendations = spotify_client.get_recommendations(
-                        access_token,
-                        seed_artists=mood_seed_artists,
-                        seed_tracks=mood_seed_tracks,
-                        **params
-                    )
-
-                    if 'tracks' in recommendations:
-                        # Get 3-5 tracks for each mood
-                        mood_tracks = recommendations.get('tracks', [])[:4]
-                        print(f"Got {len(mood_tracks)} tracks for mood: {mood}")
-                        return mood_tracks
-                    else:
-                        print(f"No tracks found for mood: {mood}")
-                        return []
-                except Exception as e:
-                    print(f"Error getting recommendations for mood {mood}: {str(e)}")
-                    return []
-
-            # Get tracks for each mood in the journey
-            for mood in moods:
-                mood_tracks = get_mood_recommendations(mood, artist_ids, track_ids)
-                journey_tracks.extend(mood_tracks)
-
-            # Add specific tracks at their requested positions
-            final_journey_tracks = []
-
-            # Add start tracks
-            start_tracks = [req['track'] for req in specific_track_requests if req['position'] == 'start']
-            final_journey_tracks.extend(start_tracks)
-
-            # Add the mood-based tracks
-            final_journey_tracks.extend(journey_tracks)
-
-            # Add end tracks
-            end_tracks = [req['track'] for req in specific_track_requests if req['position'] == 'end']
-            final_journey_tracks.extend(end_tracks)
-
-            print(f"Created journey with {len(final_journey_tracks)} total tracks")
-
-            # If we didn't get any tracks, provide fallback tracks
-            if not final_journey_tracks:
-                print("No tracks found, using fallback tracks")
-
-                # Create fallback tracks for Playboi Carti request
-                if 'playboi carti' in prompt_lower:
-                    final_journey_tracks = [
-                        {
-                            "name": "WALK",
-                            "artists": [{"name": "Playboi Carti"}],
-                            "album": {"name": "WHOLE LOTTA RED"}
-                        },
-                        {
-                            "name": "Sky",
-                            "artists": [{"name": "Playboi Carti"}],
-                            "album": {"name": "Whole Lotta Red"}
-                        },
-                        {
-                            "name": "Magnolia",
-                            "artists": [{"name": "Playboi Carti"}],
-                            "album": {"name": "Playboi Carti"}
-                        },
-                        {
-                            "name": "Shoota",
-                            "artists": [{"name": "Playboi Carti"}, {"name": "Lil Uzi Vert"}],
-                            "album": {"name": "Die Lit"}
-                        },
-                        {
-                            "name": "Long Time (Intro)",
-                            "artists": [{"name": "Playboi Carti"}],
-                            "album": {"name": "Die Lit"}
-                        },
-                        {
-                            "name": "ILoveUIHateU",
-                            "artists": [{"name": "Playboi Carti"}],
-                            "album": {"name": "Whole Lotta Red"}
-                        },
-                        {
-                            "name": "New Tank",
-                            "artists": [{"name": "Playboi Carti"}],
-                            "album": {"name": "Whole Lotta Red"}
-                        }
-                    ]
-                else:
-                    # Generic fallback tracks for different moods
-                    final_journey_tracks = [
-                        # High energy tracks
-                        {
-                            "name": "Sicko Mode",
-                            "artists": [{"name": "Travis Scott"}, {"name": "Drake"}],
-                            "album": {"name": "Astroworld"}
-                        },
-                        {
-                            "name": "DNA.",
-                            "artists": [{"name": "Kendrick Lamar"}],
-                            "album": {"name": "DAMN."}
-                        },
-                        # Vibey tracks
-                        {
-                            "name": "Redbone",
-                            "artists": [{"name": "Childish Gambino"}],
-                            "album": {"name": "Awaken, My Love!"}
-                        },
-                        {
-                            "name": "Nights",
-                            "artists": [{"name": "Frank Ocean"}],
-                            "album": {"name": "Blonde"}
-                        },
-                        # Melancholic tracks
-                        {
-                            "name": "Self Control",
-                            "artists": [{"name": "Frank Ocean"}],
-                            "album": {"name": "Blonde"}
-                        },
-                        {
-                            "name": "505",
-                            "artists": [{"name": "Arctic Monkeys"}],
-                            "album": {"name": "Favourite Worst Nightmare"}
-                        },
-                        # Sad tracks
-                        {
-                            "name": "Marvin's Room",
-                            "artists": [{"name": "Drake"}],
-                            "album": {"name": "Take Care"}
-                        },
-                        {
-                            "name": "Jocelyn Flores",
-                            "artists": [{"name": "XXXTENTACION"}],
-                            "album": {"name": "17"}
-                        },
-                        # Upbeat tracks
-                        {
-                            "name": "Sunflower",
-                            "artists": [{"name": "Post Malone"}, {"name": "Swae Lee"}],
-                            "album": {"name": "Spider-Man: Into the Spider-Verse"}
-                        },
-                        {
-                            "name": "Good Feeling",
-                            "artists": [{"name": "Flo Rida"}],
-                            "album": {"name": "Wild Ones"}
-                        }
-                    ]
-
-            # Return the journey tracks
-            return jsonify({
-                "name": f"Music Journey: {prompt[:30]}",
-                "tracks": final_journey_tracks
-            })
-
-        except Exception as e:
-            print(f"Error creating journey: {str(e)}")
-            import traceback
-            traceback.print_exc()
-            return jsonify({"error": f"Error creating journey: {str(e)}"}), 500
+        # Return the journey tracks
+        return jsonify({
+            "name": f"AI Music Journey: {prompt[:30]}",
+            "tracks": ai_recommendations
+        })
 
     except Exception as e:
         print(f"Unexpected error in create_journey: {str(e)}")

@@ -132,6 +132,9 @@ document.addEventListener('DOMContentLoaded', () => {
         createButton.textContent = 'Creating Journey...';
         createButton.disabled = true;
 
+        // Show loading indicator
+        document.getElementById('loading-indicator').classList.remove('hidden');
+
         fetch(`${API_BASE_URL}/create-journey`, {
             method: 'POST',
             headers: {
@@ -152,6 +155,9 @@ document.addEventListener('DOMContentLoaded', () => {
             console.log('Received response:', data);
             createButton.textContent = 'Create Music Journey';
             createButton.disabled = false;
+
+            // Hide loading indicator
+            document.getElementById('loading-indicator').classList.add('hidden');
 
             const resultElement = document.getElementById('playlist-result');
             resultElement.classList.remove('hidden');
@@ -189,41 +195,57 @@ document.addEventListener('DOMContentLoaded', () => {
             if (data.tracks && data.tracks.length > 0) {
                 const tracksList = document.createElement('div');
                 tracksList.className = 'playlist-tracks';
-                tracksList.innerHTML = '<h4>Your Music Journey:</h4>';
+                tracksList.innerHTML = '<h4>Your AI-Generated Music Journey:</h4>';
 
                 // Define the moods we're looking for
-                const moods = ['high_energy', 'vibey', 'melancholic', 'sad', 'upbeat'];
                 const moodNames = {
                     'high_energy': 'High Energy',
                     'vibey': 'Vibey & Ambient',
                     'melancholic': 'Melancholic & Nostalgic',
                     'sad': 'Emotional & Sad',
-                    'upbeat': 'Upbeat & Bouncy'
+                    'upbeat': 'Upbeat & Bouncy',
+                    // Add fallbacks for other possible mood values
+                    'energetic': 'Energetic',
+                    'chill': 'Chill & Relaxed',
+                    'nostalgic': 'Nostalgic',
+                    'emotional': 'Emotional',
+                    'happy': 'Happy & Upbeat'
                 };
 
-                // Group tracks by mood based on their position in the array
-                // This assumes the tracks are returned in the order of the moods
-                const tracksPerMood = Math.ceil(data.tracks.length / moods.length);
+                // Group tracks by their mood property
+                const tracksByMood = {};
 
-                // Create a section for each mood
-                moods.forEach((mood, moodIndex) => {
-                    // Get tracks for this mood
-                    const moodTracks = data.tracks.slice(
-                        moodIndex * tracksPerMood,
-                        Math.min((moodIndex + 1) * tracksPerMood, data.tracks.length)
-                    );
+                // First, organize tracks by mood
+                data.tracks.forEach(track => {
+                    const mood = track.mood ? track.mood.toLowerCase() : 'other';
+                    if (!tracksByMood[mood]) {
+                        tracksByMood[mood] = [];
+                    }
+                    tracksByMood[mood].push(track);
+                });
+
+                // Create a section for each mood that has tracks
+                Object.keys(tracksByMood).forEach(mood => {
+                    const moodTracks = tracksByMood[mood];
 
                     if (moodTracks.length > 0) {
                         // Create a section for this mood
                         const moodSection = document.createElement('div');
                         moodSection.className = 'mood-section';
-                        moodSection.innerHTML = `<h5>${moodNames[mood]}</h5><ul>`;
+                        const moodTitle = moodNames[mood] || mood.charAt(0).toUpperCase() + mood.slice(1);
+                        moodSection.innerHTML = `<h5>${moodTitle}</h5><ul>`;
 
                         // Add tracks to this mood section
                         moodTracks.forEach(track => {
                             const artists = track.artists.map(artist => artist.name).join(', ');
                             const album = track.album ? track.album.name : '';
-                            moodSection.innerHTML += `<li>${track.name} - ${artists}${album ? ` <span class="album-name">(${album})</span>` : ''}</li>`;
+                            const reason = track.reason ? `<div class="track-reason">${track.reason}</div>` : '';
+                            moodSection.innerHTML += `
+                                <li>
+                                    <div class="track-info">${track.name} - ${artists}${album ? ` <span class="album-name">(${album})</span>` : ''}</div>
+                                    ${reason}
+                                </li>
+                            `;
                         });
 
                         moodSection.innerHTML += '</ul>';
@@ -242,6 +264,10 @@ document.addEventListener('DOMContentLoaded', () => {
             console.error('Error:', error);
             createButton.textContent = 'Create Music Journey';
             createButton.disabled = false;
+
+            // Hide loading indicator
+            document.getElementById('loading-indicator').classList.add('hidden');
+
             alert(`Failed to create music journey: ${error.message}`);
         });
     }
