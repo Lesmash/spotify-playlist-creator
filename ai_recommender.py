@@ -11,6 +11,16 @@ def generate_recommendations(prompt, top_artists=None, top_tracks=None):
     Generate music recommendations using AI based on a prompt and user's top artists/tracks
     """
     try:
+        # Check if this is a request for a mixed artist journey with a specific intro track
+        prompt_lower = prompt.lower()
+        mixed_artist_journey = 'top artists' in prompt_lower and 'journey' in prompt_lower
+        specific_intro = 'walk' in prompt_lower and 'playboi carti' in prompt_lower and 'intro' in prompt_lower
+
+        # If we have top artists and it's a mixed journey request, use our specialized function
+        if (mixed_artist_journey or specific_intro) and top_artists:
+            print("Using specialized mixed artist journey with actual top artists")
+            return create_mixed_artist_journey(prompt, top_artists, top_tracks)
+
         # Check if we have an API key
         if not HUGGINGFACE_API_KEY:
             print("No Hugging Face API key found. Using fallback recommendations.")
@@ -126,6 +136,459 @@ def generate_recommendations(prompt, top_artists=None, top_tracks=None):
         print(f"Error generating AI recommendations: {e}")
         return fallback_recommendations(prompt)
 
+def create_mixed_artist_journey(prompt, top_artists, top_tracks):
+    """
+    Create a journey playlist using the user's actual top artists and specific requirements from the prompt
+    """
+    print("Creating mixed artist journey with user's actual top artists")
+    prompt_lower = prompt.lower()
+
+    # Extract top artist names for easier reference
+    top_artist_names = [artist.get('name', '') for artist in top_artists if artist.get('name')][:10]
+    print(f"User's top artists: {', '.join(top_artist_names)}")
+
+    # Check if specific artists are mentioned in the prompt
+    specific_artists = {}
+
+    # Check for Playboi Carti specifically since it's mentioned in the prompt
+    if 'playboi carti' in prompt_lower:
+        specific_artists['Playboi Carti'] = {
+            'intro': 'walk' in prompt_lower and 'intro' in prompt_lower,
+            'finale': 'end' in prompt_lower or 'finally' in prompt_lower
+        }
+
+    # Check for other top artists in the prompt
+    for artist_name in top_artist_names:
+        if artist_name.lower() in prompt_lower and artist_name != 'Playboi Carti':
+            specific_artists[artist_name] = {
+                'intro': False,  # Only Playboi Carti is specified as intro
+                'finale': False  # Only Playboi Carti is specified as finale
+            }
+
+    # Create mood categories
+    high_energy_tracks = []
+    vibey_tracks = []
+    melancholic_tracks = []
+    sad_tracks = []
+    upbeat_tracks = []
+    finale_tracks = []
+
+    # Add specific intro track if requested
+    intro_track = None
+    if specific_artists.get('Playboi Carti', {}).get('intro'):
+        intro_track = {
+            'name': "WALK",
+            'artists': [{'name': "Playboi Carti"}],
+            'album': {'name': "WHOLE LOTTA RED"},
+            'mood': "high_energy",
+            'reason': "Requested as the intro track - high energy opener"
+        }
+
+    # Add tracks from top artists to appropriate mood categories
+    # This is where we'd use the actual top artists data
+
+    # Add Playboi Carti tracks if they're in the top artists
+    if 'Playboi Carti' in top_artist_names or 'playboi carti' in prompt_lower:
+        # High energy Playboi Carti tracks
+        high_energy_tracks.extend([
+            {
+                'name': "New Tank",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "Whole Lotta Red"},
+                'mood': "high_energy",
+                'reason': "Rage-type track with aggressive delivery"
+            },
+            {
+                'name': "Stop Breathing",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "Whole Lotta Red"},
+                'mood': "high_energy",
+                'reason': "Intense, aggressive track with a hard-hitting beat"
+            }
+        ])
+
+        # Vibey Playboi Carti tracks
+        vibey_tracks.extend([
+            {
+                'name': "Location",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "Playboi Carti"},
+                'mood': "vibey",
+                'reason': "Ethereal production with ambient qualities"
+            },
+            {
+                'name': "Sky",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "Whole Lotta Red"},
+                'mood': "vibey",
+                'reason': "More vibey and ambient sound with melodic elements"
+            }
+        ])
+
+        # Melancholic Playboi Carti tracks
+        melancholic_tracks.extend([
+            {
+                'name': "ILoveUIHateU",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "Whole Lotta Red"},
+                'mood': "melancholic",
+                'reason': "Melancholic but still energetic with bittersweet lyrics"
+            }
+        ])
+
+        # Sad Playboi Carti tracks
+        sad_tracks.extend([
+            {
+                'name': "F33l Lik3 Dyin",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "Whole Lotta Red"},
+                'mood': "sad",
+                'reason': "Emotional outro to Whole Lotta Red with vulnerable lyrics"
+            }
+        ])
+
+        # Upbeat Playboi Carti tracks
+        upbeat_tracks.extend([
+            {
+                'name': "Magnolia",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "Playboi Carti"},
+                'mood': "upbeat",
+                'reason': "Bouncy and upbeat with an infectious hook"
+            },
+            {
+                'name': "Slay3r",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "Whole Lotta Red"},
+                'mood': "upbeat",
+                'reason': "Bouncy track with a fun, energetic vibe"
+            }
+        ])
+
+        # Finale Playboi Carti tracks
+        if specific_artists.get('Playboi Carti', {}).get('finale'):
+            finale_tracks.extend([
+                {
+                    'name': "Teen X",
+                    'artists': [{'name': "Playboi Carti"}, {'name': "Future"}],
+                    'album': {'name': "Whole Lotta Red"},
+                    'mood': "high_energy",
+                    'reason': "Experimental and high-energy finale that blends multiple styles"
+                },
+                {
+                    'name': "Metamorphosis",
+                    'artists': [{'name': "Playboi Carti"}, {'name': "Kid Cudi"}],
+                    'album': {'name': "Whole Lotta Red"},
+                    'mood': "high_energy",
+                    'reason': "Psychedelic track that combines energy with emotional depth - perfect finale"
+                }
+            ])
+
+    # Add tracks from other top artists
+    # We'll add some popular tracks for common top artists
+
+    # Kendrick Lamar
+    if 'Kendrick Lamar' in top_artist_names:
+        high_energy_tracks.extend([
+            {
+                'name': "DNA.",
+                'artists': [{'name': "Kendrick Lamar"}],
+                'album': {'name': "DAMN."},
+                'mood': "high_energy",
+                'reason': "Intense lyrics and hard-hitting beat with aggressive delivery"
+            },
+            {
+                'name': "HUMBLE.",
+                'artists': [{'name': "Kendrick Lamar"}],
+                'album': {'name': "DAMN."},
+                'mood': "high_energy",
+                'reason': "Confident, assertive track with a powerful beat"
+            }
+        ])
+
+        melancholic_tracks.extend([
+            {
+                'name': "PRIDE.",
+                'artists': [{'name': "Kendrick Lamar"}],
+                'album': {'name': "DAMN."},
+                'mood': "melancholic",
+                'reason': "Introspective track with a dreamy, nostalgic production"
+            }
+        ])
+
+        sad_tracks.extend([
+            {
+                'name': "u",
+                'artists': [{'name': "Kendrick Lamar"}],
+                'album': {'name': "To Pimp A Butterfly"},
+                'mood': "sad",
+                'reason': "Intense emotional breakdown with themes of self-loathing and guilt"
+            }
+        ])
+
+    # Drake
+    if 'Drake' in top_artist_names:
+        vibey_tracks.extend([
+            {
+                'name': "Passionfruit",
+                'artists': [{'name': "Drake"}],
+                'album': {'name': "More Life"},
+                'mood': "vibey",
+                'reason': "Tropical house-influenced track with a relaxed, groovy feel"
+            }
+        ])
+
+        sad_tracks.extend([
+            {
+                'name': "Marvin's Room",
+                'artists': [{'name': "Drake"}],
+                'album': {'name': "Take Care"},
+                'mood': "sad",
+                'reason': "Raw emotional vulnerability with drunk phone calls and regret"
+            }
+        ])
+
+        upbeat_tracks.extend([
+            {
+                'name': "Nice For What",
+                'artists': [{'name': "Drake"}],
+                'album': {'name': "Scorpion"},
+                'mood': "upbeat",
+                'reason': "Bouncy New Orleans bounce-inspired track with an empowering message"
+            }
+        ])
+
+    # Travis Scott
+    if 'Travis Scott' in top_artist_names:
+        high_energy_tracks.extend([
+            {
+                'name': "Sicko Mode",
+                'artists': [{'name': "Travis Scott"}, {'name': "Drake"}],
+                'album': {'name': "Astroworld"},
+                'mood': "high_energy",
+                'reason': "High energy track with dynamic beat changes and multiple sections"
+            }
+        ])
+
+        vibey_tracks.extend([
+            {
+                'name': "SKELETONS",
+                'artists': [{'name': "Travis Scott"}],
+                'album': {'name': "Astroworld"},
+                'mood': "vibey",
+                'reason': "Psychedelic and dreamy production with a hypnotic feel"
+            }
+        ])
+
+    # Kanye West
+    if 'Kanye West' in top_artist_names:
+        high_energy_tracks.extend([
+            {
+                'name': "POWER",
+                'artists': [{'name': "Kanye West"}],
+                'album': {'name': "My Beautiful Dark Twisted Fantasy"},
+                'mood': "high_energy",
+                'reason': "Powerful production with energetic delivery"
+            }
+        ])
+
+        melancholic_tracks.extend([
+            {
+                'name': "Runaway",
+                'artists': [{'name': "Kanye West"}, {'name': "Pusha T"}],
+                'album': {'name': "My Beautiful Dark Twisted Fantasy"},
+                'mood': "melancholic",
+                'reason': "Beautiful piano intro leading to an introspective journey of self-awareness"
+            }
+        ])
+
+        sad_tracks.extend([
+            {
+                'name': "Street Lights",
+                'artists': [{'name': "Kanye West"}],
+                'album': {'name': "808s & Heartbreak"},
+                'mood': "sad",
+                'reason': "Emotional track with auto-tuned vocals expressing vulnerability"
+            }
+        ])
+
+        upbeat_tracks.extend([
+            {
+                'name': "Good Life",
+                'artists': [{'name': "Kanye West"}, {'name': "T-Pain"}],
+                'album': {'name': "Graduation"},
+                'mood': "upbeat",
+                'reason': "Celebratory track with a positive message and catchy chorus"
+            }
+        ])
+
+    # Frank Ocean
+    if 'Frank Ocean' in top_artist_names:
+        vibey_tracks.extend([
+            {
+                'name': "Nights",
+                'artists': [{'name': "Frank Ocean"}],
+                'album': {'name': "Blonde"},
+                'mood': "vibey",
+                'reason': "Atmospheric with a beat switch that changes the mood halfway through"
+            }
+        ])
+
+        melancholic_tracks.extend([
+            {
+                'name': "Self Control",
+                'artists': [{'name': "Frank Ocean"}],
+                'album': {'name': "Blonde"},
+                'mood': "melancholic",
+                'reason': "Bittersweet lyrics with beautiful guitar and vocal layering"
+            },
+            {
+                'name': "Ivy",
+                'artists': [{'name': "Frank Ocean"}],
+                'album': {'name': "Blonde"},
+                'mood': "melancholic",
+                'reason': "Reflective lyrics about past relationships with a nostalgic tone"
+            }
+        ])
+
+    # Tyler, The Creator
+    if 'Tyler, The Creator' in top_artist_names:
+        upbeat_tracks.extend([
+            {
+                'name': "EARFQUAKE",
+                'artists': [{'name': "Tyler, The Creator"}],
+                'album': {'name': "IGOR"},
+                'mood': "upbeat",
+                'reason': "Bouncy track with a catchy chorus and playful energy"
+            }
+        ])
+
+        melancholic_tracks.extend([
+            {
+                'name': "See You Again",
+                'artists': [{'name': "Tyler, The Creator"}, {'name': "Kali Uchis"}],
+                'album': {'name': "Flower Boy"},
+                'mood': "melancholic",
+                'reason': "Dreamy production with nostalgic lyrics about longing"
+            }
+        ])
+
+    # The Weeknd
+    if 'The Weeknd' in top_artist_names:
+        vibey_tracks.extend([
+            {
+                'name': "After Hours",
+                'artists': [{'name': "The Weeknd"}],
+                'album': {'name': "After Hours"},
+                'mood': "vibey",
+                'reason': "Ambient production with a hypnotic rhythm and nocturnal feel"
+            }
+        ])
+
+        upbeat_tracks.extend([
+            {
+                'name': "Blinding Lights",
+                'artists': [{'name': "The Weeknd"}],
+                'album': {'name': "After Hours"},
+                'mood': "upbeat",
+                'reason': "Energetic 80s-inspired synth-pop track with a driving beat"
+            }
+        ])
+
+    # Add more artists as needed...
+
+    # If we don't have enough tracks from the user's top artists, add some generic ones
+    if len(high_energy_tracks) < 3:
+        high_energy_tracks.extend([
+            {
+                'name': "Mo Bamba",
+                'artists': [{'name': "Sheck Wes"}],
+                'album': {'name': "Mudboy"},
+                'mood': "high_energy",
+                'reason': "Rage-inducing anthem with heavy bass and crowd-pleasing energy"
+            }
+        ])
+
+    if len(vibey_tracks) < 3:
+        vibey_tracks.extend([
+            {
+                'name': "Redbone",
+                'artists': [{'name': "Childish Gambino"}],
+                'album': {'name': "Awaken, My Love!"},
+                'mood': "vibey",
+                'reason': "Smooth, funk-inspired groove with atmospheric production"
+            }
+        ])
+
+    if len(melancholic_tracks) < 3:
+        melancholic_tracks.extend([
+            {
+                'name': "505",
+                'artists': [{'name': "Arctic Monkeys"}],
+                'album': {'name': "Favourite Worst Nightmare"},
+                'mood': "melancholic",
+                'reason': "Nostalgic and builds to an emotional climax with yearning lyrics"
+            }
+        ])
+
+    if len(sad_tracks) < 3:
+        sad_tracks.extend([
+            {
+                'name': "Jocelyn Flores",
+                'artists': [{'name': "XXXTENTACION"}],
+                'album': {'name': "17"},
+                'mood': "sad",
+                'reason': "Deeply emotional tribute to a friend who passed away"
+            }
+        ])
+
+    if len(upbeat_tracks) < 3:
+        upbeat_tracks.extend([
+            {
+                'name': "Sunflower",
+                'artists': [{'name': "Post Malone"}, {'name': "Swae Lee"}],
+                'album': {'name': "Spider-Man: Into the Spider-Verse"},
+                'mood': "upbeat",
+                'reason': "Bright melody with uplifting lyrics and a catchy chorus"
+            }
+        ])
+
+    if len(finale_tracks) < 1 and 'end' in prompt_lower:
+        finale_tracks.extend([
+            {
+                'name': "Stronger",
+                'artists': [{'name': "Kanye West"}],
+                'album': {'name': "Graduation"},
+                'mood': "high_energy",
+                'reason': "Triumphant finale that combines electronic elements with motivational themes"
+            }
+        ])
+
+    # Combine all tracks to create a complete journey with some randomization
+    journey = []
+
+    # Add the specific intro track if requested
+    if intro_track:
+        journey.append(intro_track)
+
+    # Shuffle each mood category slightly to add variety
+    # but keep the overall journey structure intact
+    random.shuffle(high_energy_tracks)
+    random.shuffle(vibey_tracks)
+    random.shuffle(melancholic_tracks)
+    random.shuffle(sad_tracks)
+    random.shuffle(upbeat_tracks)
+
+    # Add tracks to the journey
+    journey.extend(high_energy_tracks)
+    journey.extend(vibey_tracks)
+    journey.extend(melancholic_tracks)
+    journey.extend(sad_tracks)
+    journey.extend(upbeat_tracks)
+    journey.extend(finale_tracks)
+
+    return journey
+
 def fallback_recommendations(prompt):
     """Provide fallback recommendations if the AI service fails"""
     print("Using fallback recommendations")
@@ -134,11 +597,20 @@ def fallback_recommendations(prompt):
     # This ensures we don't always return the exact same tracks in the same order
     random.seed(hash(prompt) % 10000)  # Use the prompt to seed the random generator
 
-    # Check for specific artist mentions
+    # Check for specific artist mentions and request patterns
     prompt_lower = prompt.lower()
 
-    # Playboi Carti specific recommendations
-    if 'playboi carti' in prompt_lower:
+    # Check if this is a request for a mixed artist journey with a specific intro track
+    mixed_artist_journey = 'top artists' in prompt_lower and 'journey' in prompt_lower
+    specific_intro = False
+
+    # Check for specific intro track requests
+    if 'walk' in prompt_lower and 'playboi carti' in prompt_lower and 'intro' in prompt_lower:
+        specific_intro = True
+        print("Detected request for WALK by Playboi Carti as intro with mixed artists journey")
+
+    # Pure Playboi Carti journey (only if not requesting mixed artists)
+    if 'playboi carti' in prompt_lower and not mixed_artist_journey:
         # Create a comprehensive Playboi Carti journey
         high_energy_tracks = [
             {
@@ -320,6 +792,260 @@ def fallback_recommendations(prompt):
 
             if walk_track:
                 journey.append(walk_track)
+
+        # Add tracks to the journey
+        journey.extend(high_energy_tracks)
+        journey.extend(vibey_tracks)
+        journey.extend(melancholic_tracks)
+        journey.extend(sad_tracks)
+        journey.extend(upbeat_tracks)
+        journey.extend(finale_tracks)
+
+        return journey
+
+    # Mixed artist journey with specific intro track
+    if mixed_artist_journey or specific_intro:
+        print("Creating mixed artist journey with top artists")
+
+        # Create a diverse journey with various artists
+        # Start with WALK by Playboi Carti if specifically requested
+        intro_track = None
+        if specific_intro:
+            intro_track = {
+                'name': "WALK",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "WHOLE LOTTA RED"},
+                'mood': "high_energy",
+                'reason': "Requested as the intro track - high energy opener"
+            }
+
+        # Create a diverse set of high energy tracks by different artists
+        high_energy_tracks = [
+            {
+                'name': "Sicko Mode",
+                'artists': [{'name': "Travis Scott"}, {'name': "Drake"}],
+                'album': {'name': "Astroworld"},
+                'mood': "high_energy",
+                'reason': "High energy track with dynamic beat changes and multiple sections"
+            },
+            {
+                'name': "DNA.",
+                'artists': [{'name': "Kendrick Lamar"}],
+                'album': {'name': "DAMN."},
+                'mood': "high_energy",
+                'reason': "Intense lyrics and hard-hitting beat with aggressive delivery"
+            },
+            {
+                'name': "New Tank",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "Whole Lotta Red"},
+                'mood': "high_energy",
+                'reason': "Rage-type track with aggressive delivery"
+            },
+            {
+                'name': "POWER",
+                'artists': [{'name': "Kanye West"}],
+                'album': {'name': "My Beautiful Dark Twisted Fantasy"},
+                'mood': "high_energy",
+                'reason': "Powerful production with energetic delivery"
+            },
+            {
+                'name': "m.A.A.d city",
+                'artists': [{'name': "Kendrick Lamar"}, {'name': "MC Eiht"}],
+                'album': {'name': "good kid, m.A.A.d city"},
+                'mood': "high_energy",
+                'reason': "Intense storytelling with a hard-hitting beat"
+            }
+        ]
+
+        # Vibey and ambient tracks by different artists
+        vibey_tracks = [
+            {
+                'name': "Nights",
+                'artists': [{'name': "Frank Ocean"}],
+                'album': {'name': "Blonde"},
+                'mood': "vibey",
+                'reason': "Atmospheric with a beat switch that changes the mood halfway through"
+            },
+            {
+                'name': "Location",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "Playboi Carti"},
+                'mood': "vibey",
+                'reason': "Ethereal production with ambient qualities"
+            },
+            {
+                'name': "Redbone",
+                'artists': [{'name': "Childish Gambino"}],
+                'album': {'name': "Awaken, My Love!"},
+                'mood': "vibey",
+                'reason': "Smooth, funk-inspired groove with atmospheric production"
+            },
+            {
+                'name': "After Hours",
+                'artists': [{'name': "The Weeknd"}],
+                'album': {'name': "After Hours"},
+                'mood': "vibey",
+                'reason': "Ambient production with a hypnotic rhythm and nocturnal feel"
+            },
+            {
+                'name': "Flashing Lights",
+                'artists': [{'name': "Kanye West"}, {'name': "Dwele"}],
+                'album': {'name': "Graduation"},
+                'mood': "vibey",
+                'reason': "Lush production with strings and synths creating an immersive atmosphere"
+            }
+        ]
+
+        # Melancholic but beautiful tracks by different artists
+        melancholic_tracks = [
+            {
+                'name': "Self Control",
+                'artists': [{'name': "Frank Ocean"}],
+                'album': {'name': "Blonde"},
+                'mood': "melancholic",
+                'reason': "Bittersweet lyrics with beautiful guitar and vocal layering"
+            },
+            {
+                'name': "ILoveUIHateU",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "Whole Lotta Red"},
+                'mood': "melancholic",
+                'reason': "Melancholic but still energetic with bittersweet lyrics"
+            },
+            {
+                'name': "Runaway",
+                'artists': [{'name': "Kanye West"}, {'name': "Pusha T"}],
+                'album': {'name': "My Beautiful Dark Twisted Fantasy"},
+                'mood': "melancholic",
+                'reason': "Beautiful piano intro leading to an introspective journey of self-awareness"
+            },
+            {
+                'name': "Ivy",
+                'artists': [{'name': "Frank Ocean"}],
+                'album': {'name': "Blonde"},
+                'mood': "melancholic",
+                'reason': "Reflective lyrics about past relationships with a nostalgic tone"
+            },
+            {
+                'name': "505",
+                'artists': [{'name': "Arctic Monkeys"}],
+                'album': {'name': "Favourite Worst Nightmare"},
+                'mood': "melancholic",
+                'reason': "Nostalgic and builds to an emotional climax with yearning lyrics"
+            }
+        ]
+
+        # Sad and emotional tracks by different artists
+        sad_tracks = [
+            {
+                'name': "Marvin's Room",
+                'artists': [{'name': "Drake"}],
+                'album': {'name': "Take Care"},
+                'mood': "sad",
+                'reason': "Raw emotional vulnerability with drunk phone calls and regret"
+            },
+            {
+                'name': "F33l Lik3 Dyin",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "Whole Lotta Red"},
+                'mood': "sad",
+                'reason': "Emotional outro to Whole Lotta Red with vulnerable lyrics"
+            },
+            {
+                'name': "u",
+                'artists': [{'name': "Kendrick Lamar"}],
+                'album': {'name': "To Pimp A Butterfly"},
+                'mood': "sad",
+                'reason': "Intense emotional breakdown with themes of self-loathing and guilt"
+            },
+            {
+                'name': "Jocelyn Flores",
+                'artists': [{'name': "XXXTENTACION"}],
+                'album': {'name': "17"},
+                'mood': "sad",
+                'reason': "Deeply emotional tribute to a friend who passed away"
+            },
+            {
+                'name': "Street Lights",
+                'artists': [{'name': "Kanye West"}],
+                'album': {'name': "808s & Heartbreak"},
+                'mood': "sad",
+                'reason': "Emotional track with auto-tuned vocals expressing vulnerability"
+            }
+        ]
+
+        # Upbeat and bouncy tracks by different artists
+        upbeat_tracks = [
+            {
+                'name': "Magnolia",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "Playboi Carti"},
+                'mood': "upbeat",
+                'reason': "Bouncy and upbeat with an infectious hook"
+            },
+            {
+                'name': "Good Life",
+                'artists': [{'name': "Kanye West"}, {'name': "T-Pain"}],
+                'album': {'name': "Graduation"},
+                'mood': "upbeat",
+                'reason': "Celebratory track with a positive message and catchy chorus"
+            },
+            {
+                'name': "Sunflower",
+                'artists': [{'name': "Post Malone"}, {'name': "Swae Lee"}],
+                'album': {'name': "Spider-Man: Into the Spider-Verse"},
+                'mood': "upbeat",
+                'reason': "Bright melody with uplifting lyrics and a catchy chorus"
+            },
+            {
+                'name': "EARFQUAKE",
+                'artists': [{'name': "Tyler, The Creator"}],
+                'album': {'name': "IGOR"},
+                'mood': "upbeat",
+                'reason': "Bouncy track with a catchy chorus and playful energy"
+            },
+            {
+                'name': "Slay3r",
+                'artists': [{'name': "Playboi Carti"}],
+                'album': {'name': "Whole Lotta Red"},
+                'mood': "upbeat",
+                'reason': "Bouncy track with a fun, energetic vibe"
+            }
+        ]
+
+        # Finale tracks - end with a Playboi Carti song that blends all moods
+        finale_tracks = [
+            {
+                'name': "Teen X",
+                'artists': [{'name': "Playboi Carti"}, {'name': "Future"}],
+                'album': {'name': "Whole Lotta Red"},
+                'mood': "high_energy",
+                'reason': "Experimental and high-energy finale that blends multiple styles"
+            },
+            {
+                'name': "Metamorphosis",
+                'artists': [{'name': "Playboi Carti"}, {'name': "Kid Cudi"}],
+                'album': {'name': "Whole Lotta Red"},
+                'mood': "high_energy",
+                'reason': "Psychedelic track that combines energy with emotional depth - perfect finale"
+            }
+        ]
+
+        # Combine all tracks to create a complete journey with some randomization
+        journey = []
+
+        # Add the specific intro track if requested
+        if intro_track:
+            journey.append(intro_track)
+
+        # Shuffle each mood category slightly to add variety
+        # but keep the overall journey structure intact
+        random.shuffle(high_energy_tracks)
+        random.shuffle(vibey_tracks)
+        random.shuffle(melancholic_tracks)
+        random.shuffle(sad_tracks)
+        random.shuffle(upbeat_tracks)
 
         # Add tracks to the journey
         journey.extend(high_energy_tracks)

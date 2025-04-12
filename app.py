@@ -204,12 +204,22 @@ def create_journey():
                 if 'items' in top_artists_response:
                     top_artists = top_artists_response.get('items', [])
                     print(f"Retrieved {len(top_artists)} top artists")
+                    if top_artists:
+                        print(f"Top artists: {', '.join([artist.get('name', '') for artist in top_artists[:5]])}")
+                else:
+                    print(f"No items in top_artists_response: {top_artists_response}")
 
                 if 'items' in top_tracks_response:
                     top_tracks = top_tracks_response.get('items', [])
                     print(f"Retrieved {len(top_tracks)} top tracks")
+                    if top_tracks:
+                        print(f"Top tracks: {', '.join([track.get('name', '') for track in top_tracks[:5]])}")
+                else:
+                    print(f"No items in top_tracks_response: {top_tracks_response}")
             except Exception as e:
                 print(f"Error getting Spotify data: {str(e)}")
+                import traceback
+                traceback.print_exc()
                 # Continue without Spotify data
 
         # Use AI to generate recommendations
