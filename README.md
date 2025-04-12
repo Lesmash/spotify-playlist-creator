@@ -4,13 +4,22 @@ A web application that uses the Spotify API to create personalized playlists bas
 
 ## Simplified Deployment Instructions
 
+### Important Note
+
+This application uses specific versions of Flask and Werkzeug to avoid compatibility issues. The requirements.txt file includes these specific versions:
+
+```
+flask==2.0.1
+werkzeug==2.0.1
+```
+
 ### Deploy to Render
 
 1. Create an account on [Render](https://render.com/)
 2. Create a new Web Service and connect it to your GitHub repository
 3. Use the following settings:
    - Build Command: `pip install -r requirements.txt`
-   - Start Command: `gunicorn app:app`
+   - Start Command: `gunicorn wsgi:app`
 4. Add the following environment variables:
    ```
    SPOTIFY_CLIENT_ID=your_spotify_client_id
