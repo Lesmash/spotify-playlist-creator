@@ -3,7 +3,7 @@ document.addEventListener('DOMContentLoaded', () => {
     // For production, replace with your actual Render URL
     const API_BASE_URL = window.location.hostname === 'localhost' || window.location.hostname === '127.0.0.1'
         ? '' // Use relative URL for local development
-        : 'https://your-render-url.onrender.com'; // Replace with your Render URL
+        : 'https://spotify-playlist-creator-1a7x.onrender.com'; // Your actual Render URL
     let accessToken = null;
 
     // Check if we have an access token in the URL (after redirect)
