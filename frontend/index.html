@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Playlist Creator</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <h1>Spotify Playlist Creator</h1>
+            <div id="user-profile" class="hidden">
+                <img id="profile-image" src="" alt="Profile">
+                <span id="profile-name"></span>
+            </div>
+        </header>
+
+        <div id="login-section">
+            <p>Connect your Spotify account to get started</p>
+            <button id="login-button">Connect with Spotify</button>
+        </div>
+
+        <div id="app-section" class="hidden">
+            <div class="stats-section">
+                <h2>Your Top Artists</h2>
+                <div id="top-artists" class="stats-grid"></div>
+                
+                <h2>Your Top Tracks</h2>
+                <div id="top-tracks" class="stats-grid"></div>
+            </div>
+            
+            <div class="playlist-creator">
+                <h2>Create a Playlist</h2>
+                <p>Describe what kind of playlist you want:</p>
+                <textarea id="playlist-prompt" placeholder="e.g., A chill playlist for studying with piano music"></textarea>
+                <button id="create-playlist-button">Create Playlist</button>
+                <div id="playlist-result" class="hidden">
+                    <h3>Playlist Created!</h3>
+                    <p id="playlist-link"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <script src="script.js"></script>
+</body>
+</html>
