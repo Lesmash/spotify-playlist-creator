@@ -1,3 +1,4 @@
+
 # Simplified Deployment Guide
 
 This guide provides simplified instructions for deploying the Spotify Playlist Creator to GitHub Pages and Render.

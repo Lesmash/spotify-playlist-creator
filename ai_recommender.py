@@ -149,7 +149,12 @@ def create_mixed_artist_journey(prompt, top_artists, top_tracks):
 
     # Check for track limit requests
     track_limit = 20  # Default
-    if '10 tracks' in prompt_lower or 'ten tracks' in prompt_lower:
+
+    # Look for exact track count specifications
+    if 'exactly 12 tracks' in prompt_lower or '12 tracks total' in prompt_lower:
+        track_limit = 12
+        print(f"User requested exactly {track_limit} tracks")
+    elif '10 tracks' in prompt_lower or 'ten tracks' in prompt_lower:
         track_limit = 10
         print(f"User requested {track_limit} tracks")
     elif '15 tracks' in prompt_lower or 'fifteen tracks' in prompt_lower:
@@ -158,6 +163,21 @@ def create_mixed_artist_journey(prompt, top_artists, top_tracks):
     elif '5 tracks' in prompt_lower or 'five tracks' in prompt_lower:
         track_limit = 5
         print(f"User requested {track_limit} tracks")
+    elif '12 tracks' in prompt_lower or 'twelve tracks' in prompt_lower:
+        track_limit = 12
+        print(f"User requested {track_limit} tracks")
+
+    # Check for tracks per mood
+    tracks_per_mood = None
+    if '2 tracks per mood' in prompt_lower or 'two tracks per mood' in prompt_lower:
+        tracks_per_mood = 2
+        print(f"User requested {tracks_per_mood} tracks per mood")
+    elif '1 track per mood' in prompt_lower or 'one track per mood' in prompt_lower:
+        tracks_per_mood = 1
+        print(f"User requested {tracks_per_mood} track per mood")
+    elif '3 tracks per mood' in prompt_lower or 'three tracks per mood' in prompt_lower:
+        tracks_per_mood = 3
+        print(f"User requested {tracks_per_mood} tracks per mood")
 
     # Parse for custom include/exclude lists
     excluded_artists = []
@@ -806,15 +826,27 @@ def create_mixed_artist_journey(prompt, top_artists, top_tracks):
     # We want to maintain the emotional journey while respecting the track limit
     remaining_tracks = track_limit - len(finale_tracks)
 
-    # Calculate total weight
-    total_weight = sum(mood_weights.values())
+    # If tracks_per_mood was specified in the prompt, use that instead of calculating
+    if tracks_per_mood is not None:
+        # Override the calculated values with the user-specified value
+        tracks_per_mood = {
+            'high_energy': tracks_per_mood,
+            'vibey': tracks_per_mood,
+            'melancholic': tracks_per_mood,
+            'sad': tracks_per_mood,
+            'upbeat': tracks_per_mood
+        }
+        print(f"Using {tracks_per_mood['high_energy']} tracks per mood as requested")
+    else:
+        # Calculate total weight
+        total_weight = sum(mood_weights.values())
 
-    # Calculate tracks per mood based on weights
-    tracks_per_mood = {}
-    for mood, weight in mood_weights.items():
-        # Calculate proportional number of tracks for this mood
-        mood_tracks = max(1, int(remaining_tracks * (weight / total_weight)))
-        tracks_per_mood[mood] = mood_tracks
+        # Calculate tracks per mood based on weights
+        tracks_per_mood = {}
+        for mood, weight in mood_weights.items():
+            # Calculate proportional number of tracks for this mood
+            mood_tracks = max(1, int(remaining_tracks * (weight / total_weight)))
+            tracks_per_mood[mood] = mood_tracks
 
     # Adjust if we've allocated too many tracks
     total_allocated = sum(tracks_per_mood.values())
