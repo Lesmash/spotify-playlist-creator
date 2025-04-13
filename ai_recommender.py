@@ -143,14 +143,27 @@ def create_mixed_artist_journey(prompt, top_artists, top_tracks):
     print("Creating mixed artist journey with user's actual top artists")
     prompt_lower = prompt.lower()
 
+    # Add randomization based on timestamp to ensure different results each time
+    import time
+    random.seed(int(time.time()))
+
     # Check for track limit requests
     track_limit = 20  # Default
     if '10 tracks' in prompt_lower or 'ten tracks' in prompt_lower:
         track_limit = 10
         print(f"User requested {track_limit} tracks")
+    elif '15 tracks' in prompt_lower or 'fifteen tracks' in prompt_lower:
+        track_limit = 15
+        print(f"User requested {track_limit} tracks")
+    elif '5 tracks' in prompt_lower or 'five tracks' in prompt_lower:
+        track_limit = 5
+        print(f"User requested {track_limit} tracks")
+
+    # Parse for custom include/exclude lists
+    excluded_artists = []
+    included_artists = []
 
     # Check for artist exclusions
-    excluded_artists = []
     if 'exclude kendrick' in prompt_lower or 'exclude kendrick lamar' in prompt_lower:
         excluded_artists.append('Kendrick Lamar')
         print("Excluding Kendrick Lamar (except as a feature)")
@@ -159,9 +172,41 @@ def create_mixed_artist_journey(prompt, top_artists, top_tracks):
         excluded_artists.append('XXXTENTACION')
         print("Excluding XXXTENTACION")
 
+    # Look for custom exclude list format: "exclude: artist1, artist2, artist3"
+    if 'exclude:' in prompt_lower:
+        exclude_section = prompt_lower.split('exclude:')[1].split('include:')[0].split('.')[0]
+        custom_excludes = [artist.strip() for artist in exclude_section.split(',')]
+        for artist in custom_excludes:
+            if artist and artist not in excluded_artists:
+                # Capitalize each word for proper formatting
+                formatted_artist = ' '.join(word.capitalize() for word in artist.split())
+                excluded_artists.append(formatted_artist)
+                print(f"Custom exclude: {formatted_artist}")
+
+    # Look for custom include list format: "include: artist1, artist2, artist3"
+    if 'include:' in prompt_lower:
+        include_section = prompt_lower.split('include:')[1].split('exclude:')[0].split('.')[0]
+        custom_includes = [artist.strip() for artist in include_section.split(',')]
+        for artist in custom_includes:
+            if artist:
+                # Capitalize each word for proper formatting
+                formatted_artist = ' '.join(word.capitalize() for word in artist.split())
+                included_artists.append(formatted_artist)
+                print(f"Custom include: {formatted_artist}")
+
     # Extract top artist names for easier reference
     top_artist_names = [artist.get('name', '') for artist in top_artists if artist.get('name') and artist.get('name') not in excluded_artists][:10]
-    print(f"User's top artists (after exclusions): {', '.join(top_artist_names)}")
+
+    # Add included artists to the top artists list if they're not already there
+    for artist in included_artists:
+        if artist not in top_artist_names:
+            top_artist_names.append(artist)
+            print(f"Added {artist} to top artists list")
+
+    # Shuffle the top artists list for more variety
+    random.shuffle(top_artist_names)
+
+    print(f"User's top artists (after exclusions/inclusions): {', '.join(top_artist_names)}")
 
     # Check if specific artists are mentioned in the prompt
     specific_artists = {}
@@ -202,6 +247,11 @@ def create_mixed_artist_journey(prompt, top_artists, top_tracks):
 
     # Add tracks from top artists to appropriate mood categories
     # This is where we'd use the actual top artists data
+
+    # Check for randomization request
+    randomize_selection = 'random' in prompt_lower or 'randomize' in prompt_lower or 'surprise me' in prompt_lower
+    if randomize_selection:
+        print("User requested randomized track selection")
 
     # Add Playboi Carti tracks if they're in the top artists
     if 'Playboi Carti' in top_artist_names or 'playboi carti' in prompt_lower:
@@ -598,16 +648,73 @@ def create_mixed_artist_journey(prompt, top_artists, top_tracks):
     if intro_track:
         journey.append(intro_track)
 
-    # Shuffle each mood category slightly to add variety
+    # Shuffle each mood category to add variety
     # but keep the overall journey structure intact
-    random.shuffle(high_energy_tracks)
-    random.shuffle(vibey_tracks)
-    random.shuffle(melancholic_tracks)
-    random.shuffle(sad_tracks)
-    random.shuffle(upbeat_tracks)
+    # If randomize_selection is true, we'll do a more thorough shuffle
+    if randomize_selection:
+        # For a more randomized experience, we'll shuffle multiple times
+        for _ in range(3):
+            random.shuffle(high_energy_tracks)
+            random.shuffle(vibey_tracks)
+            random.shuffle(melancholic_tracks)
+            random.shuffle(sad_tracks)
+            random.shuffle(upbeat_tracks)
+        print("Applied extra randomization to track selection")
+    else:
+        # Standard shuffle for normal variety
+        random.shuffle(high_energy_tracks)
+        random.shuffle(vibey_tracks)
+        random.shuffle(melancholic_tracks)
+        random.shuffle(sad_tracks)
+        random.shuffle(upbeat_tracks)
 
     # Check for different outro request
     different_outro = 'different outro' in prompt_lower
+
+    # Check for custom track requests
+    custom_track_requests = []
+    if 'add track:' in prompt_lower or 'add song:' in prompt_lower:
+        # Extract custom track requests
+        track_sections = []
+        if 'add track:' in prompt_lower:
+            track_sections.extend(prompt_lower.split('add track:')[1:])
+        if 'add song:' in prompt_lower:
+            track_sections.extend(prompt_lower.split('add song:')[1:])
+
+        for section in track_sections:
+            # Extract the track info up to the next keyword or end of text
+            track_info = section.split('add')[0].strip()
+            if not track_info.endswith('.'):
+                track_info = track_info.split('.')[0]
+
+            # Try to parse artist and song
+            if ' by ' in track_info:
+                song, artist = track_info.split(' by ', 1)
+                song = song.strip()
+                artist = artist.strip()
+
+                # Format properly
+                artist = ' '.join(word.capitalize() for word in artist.split())
+
+                # Add to custom tracks
+                custom_track = {
+                    'name': song,
+                    'artists': [{'name': artist}],
+                    'album': {'name': "Unknown"},
+                    'mood': "custom",
+                    'reason': "User specifically requested this track"
+                }
+                custom_track_requests.append(custom_track)
+                print(f"Adding custom track: {song} by {artist}")
+
+    # Add custom tracks to the journey
+    if custom_track_requests:
+        # Insert custom tracks at the beginning of the journey
+        for track in custom_track_requests:
+            journey.append(track)
+        # Reduce the track limit to account for custom tracks
+        track_limit -= len(custom_track_requests)
+
     if different_outro and 'Playboi Carti' in specific_artists:
         print("User requested a different outro than Playboi Carti")
         # Replace the finale tracks with something else
@@ -653,21 +760,97 @@ def create_mixed_artist_journey(prompt, top_artists, top_tracks):
         journey.append(intro_track)
         track_limit -= 1  # Reduce the limit since we've added the intro
 
+    # Check for custom mood weights in the prompt
+    mood_weights = {
+        'high_energy': 1,
+        'vibey': 1,
+        'melancholic': 1,
+        'sad': 1,
+        'upbeat': 1
+    }
+
+    # Look for phrases like "more high energy" or "less sad"
+    if 'more high energy' in prompt_lower or 'extra high energy' in prompt_lower:
+        mood_weights['high_energy'] = 2
+        print("Increasing weight for high energy tracks")
+    if 'more vibey' in prompt_lower or 'extra vibey' in prompt_lower:
+        mood_weights['vibey'] = 2
+        print("Increasing weight for vibey tracks")
+    if 'more melancholic' in prompt_lower or 'extra melancholic' in prompt_lower:
+        mood_weights['melancholic'] = 2
+        print("Increasing weight for melancholic tracks")
+    if 'more sad' in prompt_lower or 'extra sad' in prompt_lower:
+        mood_weights['sad'] = 2
+        print("Increasing weight for sad tracks")
+    if 'more upbeat' in prompt_lower or 'extra upbeat' in prompt_lower:
+        mood_weights['upbeat'] = 2
+        print("Increasing weight for upbeat tracks")
+
+    if 'less high energy' in prompt_lower or 'fewer high energy' in prompt_lower:
+        mood_weights['high_energy'] = 0.5
+        print("Decreasing weight for high energy tracks")
+    if 'less vibey' in prompt_lower or 'fewer vibey' in prompt_lower:
+        mood_weights['vibey'] = 0.5
+        print("Decreasing weight for vibey tracks")
+    if 'less melancholic' in prompt_lower or 'fewer melancholic' in prompt_lower:
+        mood_weights['melancholic'] = 0.5
+        print("Decreasing weight for melancholic tracks")
+    if 'less sad' in prompt_lower or 'fewer sad' in prompt_lower:
+        mood_weights['sad'] = 0.5
+        print("Decreasing weight for sad tracks")
+    if 'less upbeat' in prompt_lower or 'fewer upbeat' in prompt_lower:
+        mood_weights['upbeat'] = 0.5
+        print("Decreasing weight for upbeat tracks")
+
     # Calculate how many tracks to include from each mood category
     # We want to maintain the emotional journey while respecting the track limit
     remaining_tracks = track_limit - len(finale_tracks)
-    tracks_per_mood = max(1, remaining_tracks // 4)  # At least 1 track per mood
 
-    # Add tracks from each mood category
-    journey.extend(high_energy_tracks[:tracks_per_mood])
-    journey.extend(vibey_tracks[:tracks_per_mood])
-    journey.extend(melancholic_tracks[:tracks_per_mood])
-    journey.extend(sad_tracks[:tracks_per_mood])
+    # Calculate total weight
+    total_weight = sum(mood_weights.values())
 
-    # If we still have room, add some upbeat tracks
+    # Calculate tracks per mood based on weights
+    tracks_per_mood = {}
+    for mood, weight in mood_weights.items():
+        # Calculate proportional number of tracks for this mood
+        mood_tracks = max(1, int(remaining_tracks * (weight / total_weight)))
+        tracks_per_mood[mood] = mood_tracks
+
+    # Adjust if we've allocated too many tracks
+    total_allocated = sum(tracks_per_mood.values())
+    if total_allocated > remaining_tracks:
+        # Remove tracks from moods with the most tracks
+        sorted_moods = sorted(tracks_per_mood.items(), key=lambda x: x[1], reverse=True)
+        for mood, _ in sorted_moods:
+            if total_allocated <= remaining_tracks:
+                break
+            if tracks_per_mood[mood] > 1:
+                tracks_per_mood[mood] -= 1
+                total_allocated -= 1
+
+    # Add tracks from each mood category based on calculated weights
+    print(f"Track allocation: {tracks_per_mood}")
+    journey.extend(high_energy_tracks[:tracks_per_mood['high_energy']])
+    journey.extend(vibey_tracks[:tracks_per_mood['vibey']])
+    journey.extend(melancholic_tracks[:tracks_per_mood['melancholic']])
+    journey.extend(sad_tracks[:tracks_per_mood['sad']])
+    journey.extend(upbeat_tracks[:tracks_per_mood['upbeat']])
+
+    # If we still have room, add some random tracks from any category
     remaining = track_limit - len(journey) - len(finale_tracks)
     if remaining > 0:
-        journey.extend(upbeat_tracks[:remaining])
+        print(f"Adding {remaining} additional tracks to fill the playlist")
+        # Combine all remaining tracks
+        remaining_tracks_pool = []
+        remaining_tracks_pool.extend(high_energy_tracks[tracks_per_mood['high_energy']:])
+        remaining_tracks_pool.extend(vibey_tracks[tracks_per_mood['vibey']:])
+        remaining_tracks_pool.extend(melancholic_tracks[tracks_per_mood['melancholic']:])
+        remaining_tracks_pool.extend(sad_tracks[tracks_per_mood['sad']:])
+        remaining_tracks_pool.extend(upbeat_tracks[tracks_per_mood['upbeat']:])
+
+        # Shuffle and add remaining tracks
+        random.shuffle(remaining_tracks_pool)
+        journey.extend(remaining_tracks_pool[:remaining])
 
     # Add the finale tracks
     journey.extend(finale_tracks)
