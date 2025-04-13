@@ -1,0 +1,116 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Spotify Journey Creator</title>
+    <link rel="stylesheet" href="style-new.css">
+    <link rel="icon" href="favicon.ico" type="image/x-icon">
+    <meta name="description" content="Create personalized music journeys based on your Spotify listening history with AI-powered recommendations.">
+</head>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo-container">
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM16.5 16.5C16.27 16.73 15.9 16.73 15.67 16.5C14.55 15.39 13.04 14.8 11.42 14.8C9.8 14.8 8.29 15.39 7.17 16.5C6.94 16.73 6.57 16.73 6.34 16.5C6.11 16.27 6.11 15.9 6.34 15.67C7.74 14.27 9.54 13.5 11.42 13.5C13.3 13.5 15.1 14.27 16.5 15.67C16.73 15.9 16.73 16.27 16.5 16.5ZM17.79 13.21C17.56 13.44 17.19 13.44 16.96 13.21C15.54 11.79 13.55 11 11.42 11C9.29 11 7.3 11.79 5.88 13.21C5.65 13.44 5.28 13.44 5.05 13.21C4.82 12.98 4.82 12.61 5.05 12.38C6.75 10.68 9.02 9.75 11.42 9.75C13.82 9.75 16.09 10.68 17.79 12.38C18.02 12.61 18.02 12.98 17.79 13.21ZM19.07 9.93C18.84 10.16 18.47 10.16 18.24 9.93C16.54 8.23 14.05 7.25 11.42 7.25C8.79 7.25 6.3 8.23 4.6 9.93C4.37 10.16 4 10.16 3.77 9.93C3.54 9.7 3.54 9.33 3.77 9.1C5.75 7.12 8.51 6 11.42 6C14.33 6 17.09 7.12 19.07 9.1C19.3 9.33 19.3 9.7 19.07 9.93Z" fill="#1DB954"/>
+                </svg>
+                <h1>Spotify Journey Creator</h1>
+            </div>
+            <div id="user-profile" class="hidden">
+                <img id="profile-image" src="" alt="Profile">
+                <span id="profile-name"></span>
+            </div>
+        </header>
+
+        <div id="login-section">
+            <h2>Create Your Perfect Music Journey</h2>
+            <p>Get AI-powered recommendations that follow an emotional journey based on <strong>your</strong> music taste.</p>
+            <p>Connect with Spotify for personalized recommendations based on your listening history:</p>
+            <button id="login-button" class="pulse">
+                <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 8px; vertical-align: middle;">
+                    <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM16.5 16.5C16.27 16.73 15.9 16.73 15.67 16.5C14.55 15.39 13.04 14.8 11.42 14.8C9.8 14.8 8.29 15.39 7.17 16.5C6.94 16.73 6.57 16.73 6.34 16.5C6.11 16.27 6.11 15.9 6.34 15.67C7.74 14.27 9.54 13.5 11.42 13.5C13.3 13.5 15.1 14.27 16.5 15.67C16.73 15.9 16.73 16.27 16.5 16.5Z" fill="white"/>
+                </svg>
+                Connect with Spotify
+            </button>
+            <p class="note">Without connecting, you'll get generic recommendations based on keywords.</p>
+        </div>
+
+        <div id="app-section" class="hidden">
+            <div class="stats-section">
+                <h2>Your Top Artists</h2>
+                <div id="top-artists" class="stats-grid"></div>
+
+                <h2>Your Top Tracks</h2>
+                <div id="top-tracks" class="stats-grid"></div>
+            </div>
+
+            <div class="playlist-creator">
+                <h2>Create Your Music Journey</h2>
+                <p>Describe the emotional journey you want your playlist to take:</p>
+                
+                <div class="template-buttons">
+                    <button class="template-button" data-template="Create a 10-track journey starting with high energy, transitioning to vibey, and ending with emotional tracks.">Energy → Vibey → Emotional</button>
+                    <button class="template-button" data-template="Create a 12-track playlist with 2 tracks per mood: high energy, vibey, melancholic, sad, upbeat, and a powerful finale.">Balanced Journey</button>
+                    <button class="template-button" data-template="Create a 10-track playlist with more vibey tracks and less sad ones. Random selection.">Vibey Mix</button>
+                </div>
+                
+                <textarea id="playlist-prompt" placeholder="e.g., Start with high energy tracks, then transition to chill vibes, and end with emotional songs"></textarea>
+                
+                <div class="prompt-tips">
+                    <p><strong>Pro Tips:</strong></p>
+                    <ul>
+                        <li>Specify track count: <em>"10 tracks"</em>, <em>"15 tracks"</em></li>
+                        <li>Exclude artists: <em>"exclude: Kendrick Lamar, XXXTENTACION"</em></li>
+                        <li>Include specific artists: <em>"include: Frank Ocean, Travis Scott"</em></li>
+                        <li>Adjust mood balance: <em>"more vibey"</em>, <em>"less sad"</em></li>
+                        <li>Request specific intros/outros: <em>"start with WALK by Playboi Carti"</em></li>
+                        <li>Add specific songs: <em>"add song: Nights by Frank Ocean"</em></li>
+                        <li>Randomize selection: <em>"random"</em> or <em>"surprise me"</em></li>
+                    </ul>
+                </div>
+                
+                <button id="create-playlist-button">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" style="margin-right: 8px; vertical-align: middle;">
+                        <path d="M12 2C6.48 2 2 6.48 2 12C2 17.52 6.48 22 12 22C17.52 22 22 17.52 22 12C22 6.48 17.52 2 12 2ZM17 13H13V17H11V13H7V11H11V7H13V11H17V13Z" fill="white"/>
+                    </svg>
+                    Create Music Journey
+                </button>
+                
+                <div id="loading-indicator" class="hidden">
+                    <div class="spinner"></div>
+                    <p>Creating your AI-powered music journey...<br>This may take a moment</p>
+                </div>
+                
+                <div id="playlist-result" class="hidden">
+                    <div id="playlist-link"></div>
+                </div>
+            </div>
+            
+            <div class="history-section hidden" id="history-section">
+                <h3>
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+                        <path d="M13 3C8.03 3 4 7.03 4 12H1L4.89 15.89L4.96 16.03L9 12H6C6 8.13 9.13 5 13 5C16.87 5 20 8.13 20 12C20 15.87 16.87 19 13 19C11.07 19 9.32 18.21 8.06 16.94L6.64 18.36C8.27 19.99 10.51 21 13 21C17.97 21 22 16.97 22 12C22 7.03 17.97 3 13 3ZM12 8V13L16.28 15.54L17 14.33L13.5 12.25V8H12Z" fill="#1DB954"/>
+                    </svg>
+                    Your Journey History
+                </h3>
+                <ul class="history-list" id="history-list">
+                    <!-- History items will be added here dynamically -->
+                </ul>
+            </div>
+        </div>
+        
+        <footer>
+            <p>Created with ❤️ | <a href="https://github.com/yourusername/spotify-journey-creator" target="_blank">View on GitHub</a></p>
+        </footer>
+    </div>
+    
+    <div class="theme-toggle" id="theme-toggle">
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" id="theme-icon">
+            <path d="M20 8.69V4H15.31L12 0.69L8.69 4H4V8.69L0.69 12L4 15.31V20H8.69L12 23.31L15.31 20H20V15.31L23.31 12L20 8.69ZM12 18C8.69 18 6 15.31 6 12C6 8.69 8.69 6 12 6C15.31 6 18 8.69 18 12C18 15.31 15.31 18 12 18ZM12 8C9.79 8 8 9.79 8 12C8 14.21 9.79 16 12 16C14.21 16 16 14.21 16 12C16 9.79 14.21 8 12 8Z" fill="white"/>
+        </svg>
+    </div>
+
+    <script src="script-new.js"></script>
+</body>
+</html>
